@@ -38,7 +38,7 @@
       (read, pause, write); allowed values are checked
 - [x] UI: select seats, hold, countdown, release; Lab: "same seat, same moment" race with N
       people, optionally split over both instances, and a switches panel per instance
-- [x] Verified: 41 API checks. One winner in 8 two-person races and 3 races of 25 people over two
+- [x] Verified: 39 API checks. One winner in 8 two-person races and 3 races of 25 people over two
       instances (atomic and pessimistic); 40 overlapping 3-seat holds give no seat twice and no
       deadlock; naive mode tells both people "201" and one hold silently loses its seat; expired
       seats free at once, sweeping an old hold leaves the new holder's seat alone; 403 for another
@@ -104,7 +104,7 @@
       by the return; duplicates are ignored by the inbox; decline frees the seats; unsigned, wrongly
       signed and 10-minute-old webhooks get 401 and change nothing; a result for another session is
       ignored; abandoned checkouts expire with the hold; gateway down gives 502, then the retry gets
-      a session and confirms. 18 browser checks: real pay page round trip, decline on the page, live
+      a session and confirms. 16 browser checks: real pay page round trip, decline on the page, live
       grey seat for the other viewer, all 6 Lab scenarios pass
 
 ## 6. Failure lab
@@ -150,4 +150,9 @@
 
 ## 8. Wrap-up
 
-- [ ] Full regression on Windows, Linux check, interview questions
+- [x] Full regression on Windows: 211 API checks (task0 17, task1 17, task2 39, task3 21, task4 33,
+      task5 37, task6 27, task7 20) and 77 browser checks, from freshly started services
+- [x] Linux check in an Alpine container on the compose network: frozen-lockfile install, oxlint,
+      markdownlint, Prettier, typecheck, web build, retag script, both services started against the
+      containers, 8 end-to-end checks (race, live map, checkout, decline, waiting room, consistency)
+- [x] `docs/INTERVIEW-QUESTIONS.md`, ADR-013

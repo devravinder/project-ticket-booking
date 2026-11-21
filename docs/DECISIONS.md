@@ -323,3 +323,24 @@ Rejected:
   leader election.
 - Keys built inside the Lua script (`ARGV` prefix) are not Redis Cluster safe; acceptable on one
   Redis node, and the hash tag `{show}` keeps a show's keys together if it is ever clustered.
+
+## ADR-013 - Linux check in a container
+
+Date: 2026-11-21 - Status: Accepted
+
+The project is checked on Linux by copying the working tree into an `alpine` container on the
+compose network (`ticket-booking_default`), installing with `--frozen-lockfile`, running every lint,
+the typecheck and the web build, then starting both services against the `postgres` and `redis`
+containers and running HTTP-only end-to-end checks.
+
+Learned on the way:
+
+- A Windows bind mount has no exec bits. The copy needs `chmod +x` for the `.sh` script and husky
+  hooks; in git they are stored as mode 100755, so a real Linux checkout works without it.
+- Environment variables set in the shell win over `--env-file=.env.sample` (Node never overrides a
+  variable that is already set), so `DATABASE_URL=... pnpm --filter ... start` is enough to point a
+  service at other hosts.
+- A host behind a TLS-inspecting proxy needs its CA inside the container
+  (`NODE_EXTRA_CA_CERTS` and npm's `cafile`); nothing in the repo depends on it.
+
+Rejected: a CI service - this is a local learning project; the container gives the same signal.

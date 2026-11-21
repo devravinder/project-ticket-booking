@@ -35,3 +35,4 @@ Out of scope on purpose: login (you pick a username), observability, cloud deplo
 - [Tasks](docs/TASKS.md)
 - [Architecture](docs/architecture.md)
 - [Decisions (ADRs)](docs/DECISIONS.md)
+- [Interview questions](docs/INTERVIEW-QUESTIONS.md)

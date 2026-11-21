@@ -39,8 +39,6 @@ erDiagram
 A show copies its screen's seats into `show_seats` (ADR-005): one row per seat per show is what
 concurrent buyers compete for.
 
-This document grows with each task.
-
 ## Holds
 
 A hold keeps seats for one person while they pay. Two people asking for the same seat at once are
