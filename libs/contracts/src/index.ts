@@ -13,3 +13,29 @@ export type Health = {
 };
 
 export type ApiErrorBody = { statusCode: number; code: string; message: string };
+
+export type Tier = "REGULAR" | "PREMIUM";
+export type SeatStatus = "AVAILABLE" | "HELD" | "BOOKED";
+
+export type Movie = { id: string; title: string; minutes: number; rating: string };
+
+export type ShowSummary = {
+  id: string;
+  movie: Movie;
+  screen: { id: string; name: string };
+  startsAt: string;
+  priceFromCents: number;
+  seatsTotal: number;
+  seatsAvailable: number;
+};
+
+export type Seat = {
+  seatNo: string;
+  row: string;
+  col: number;
+  tier: Tier;
+  priceCents: number;
+  status: SeatStatus;
+};
+
+export type ShowDetail = ShowSummary & { rows: string[]; cols: number; seats: Seat[] };

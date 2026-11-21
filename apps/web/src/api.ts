@@ -1,4 +1,4 @@
-import { type Health, USER_HEADER } from "@tix/contracts";
+import { type Health, type ShowDetail, type ShowSummary, USER_HEADER } from "@tix/contracts";
 
 export type ServiceName = "booking" | "booking-2" | "gateway";
 export type Switches = Record<string, string | number | boolean>;
@@ -44,6 +44,8 @@ export const api = {
       throw error;
     }
   },
+  shows: () => request<ShowSummary[]>("booking", "/shows"),
+  show: (id: string) => request<ShowDetail>("booking", `/shows/${id}`),
   switches: (service: ServiceName) => request<Switches>(service, "/admin/switches"),
   setSwitches: (service: ServiceName, patch: Switches) =>
     request<Switches>(service, "/admin/switches", { method: "PUT", body: json(patch) }),

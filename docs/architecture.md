@@ -19,4 +19,24 @@ flowchart LR
 - **payment-gateway** is a fake payment provider with its own database (ADR-002).
 - **web** talks to the services through the Vite dev proxy: `/api/<service>/...`.
 
+## Data
+
+```mermaid
+erDiagram
+  movies ||--o{ shows : "is shown in"
+  screens ||--o{ screen_seats : "has layout"
+  screens ||--o{ shows : "hosts"
+  shows ||--o{ show_seats : "copies the layout"
+  show_seats {
+    text show_id PK
+    text seat_no PK
+    text tier
+    int price_cents
+    text status "AVAILABLE, HELD, BOOKED"
+  }
+```
+
+A show copies its screen's seats into `show_seats` (ADR-005): one row per seat per show is what
+concurrent buyers compete for.
+
 This document grows with each task.

@@ -4,7 +4,7 @@ Each record says what was chosen, why, and what was rejected.
 
 ## ADR-001 - Stack
 
-Date: 2026-11-06 - Status: Accepted
+Date: 2026-11-21 - Status: Accepted
 
 - **Services:** two NestJS 12 apps on Node 22+, run with `tsx` (no build step): `booking-service`
   and `payment-gateway`. Shared code is in `libs/kit` (`@tix/kit`); shared types in `libs/contracts`.
@@ -24,7 +24,7 @@ Rejected:
 
 ## ADR-002 - The payment gateway is a separate service with its own database
 
-Date: 2026-11-06 - Status: Accepted
+Date: 2026-11-21 - Status: Accepted
 
 In real life the gateway belongs to another company. We only reach it over HTTP, and it only reaches
 us through webhooks. Making it a separate process with its own database (`gateway`, role
@@ -37,7 +37,7 @@ record the payment together, and none of the failure cases would exist.
 
 ## ADR-003 - One Postgres and one Redis container
 
-Date: 2026-11-06 - Status: Accepted
+Date: 2026-11-21 - Status: Accepted
 
 One Postgres container with two databases and two roles (created by
 `infra/postgres/init/01-databases.sql`, which runs only on an empty volume). Redis runs without
@@ -48,7 +48,7 @@ Rejected: one Postgres per service - closer to production, twice the memory for 
 
 ## ADR-004 - Health checks name the failing dependency
 
-Date: 2026-11-06 - Status: Accepted
+Date: 2026-11-21 - Status: Accepted
 
 `GET /health` returns 200 with one entry per dependency, or 503 with the same body, so the Status
 page can say which one is down. Each probe has a 3-second timeout. Redis is checked only when
@@ -57,3 +57,20 @@ queue commands while disconnected (`disableOfflineQueue`), so a stopped Redis gi
 instead of a timeout.
 
 Rejected: Terminus (`@nestjs/terminus`) - one more dependency for two probes.
+
+## ADR-005 - One row per seat per show
+
+Date: 2026-11-21 - Status: Accepted
+
+`show_seats (show_id, seat_no)` holds the status of every seat of every show, copied from the
+screen's layout (`screen_seats`) when the show is created. This is the row two buyers fight over:
+"who gets A7 at 18:00" becomes "whose `UPDATE` changes this one row", which Postgres decides with a
+row lock. The price is copied too, so a later price change does not alter a seat someone is paying
+for.
+
+Rejected:
+
+- A counter per show (`seats_left`), as in the e-commerce stock: people pick a specific seat, not
+  "any seat".
+- Seats only in `bookings`, free meaning "no booking row": a hold would then be an insert that has to
+  be checked against expired rows, and the seat map needs a join with a `NOT EXISTS` for every seat.

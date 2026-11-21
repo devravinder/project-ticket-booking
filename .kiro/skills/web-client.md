@@ -7,11 +7,14 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 
 ## Structure
 
-| File                        | Role                                                         |
-| --------------------------- | ------------------------------------------------------------ |
-| `src/api.ts`                | Every REST call, through the Vite proxy `/api/<service>/...` |
-| `src/hooks.ts`              | `usePoll` (with `refresh()`), money and time formatting      |
-| `src/components/health.tsx` | Status tab: one card per service                             |
+| File                           | Role                                                         |
+| ------------------------------ | ------------------------------------------------------------ |
+| `src/api.ts`                   | Every REST call, through the Vite proxy `/api/<service>/...` |
+| `src/hooks.ts`                 | `usePoll` (with `refresh()`), money and time formatting      |
+| `src/components/health.tsx`    | Status tab: one card per service                             |
+| `src/components/shows.tsx`     | Show cards                                                   |
+| `src/components/show-page.tsx` | One show: seat map and (later) hold and checkout             |
+| `src/components/seat-map.tsx`  | Seat grid; colour from a `lookOf(seat)` callback             |
 
 ## Rules
 

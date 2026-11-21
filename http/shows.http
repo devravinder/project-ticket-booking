@@ -1,0 +1,19 @@
+@booking = http://localhost:7001
+
+### All shows with free and total seats
+GET {{booking}}/shows
+
+### One show with its seat map (rows, cols, every seat with tier, price and status)
+GET {{booking}}/shows/SHOW-1
+
+### Unknown show: 404 SHOW_NOT_FOUND
+GET {{booking}}/shows/NOPE
+
+### Demo helper: a fresh show (movie and screen from the seeds; prices default to 200.00 / 350.00)
+POST {{booking}}/admin/shows
+Content-Type: application/json
+
+{ "id": "DEMO-1", "movieId": "spirited-away", "screenId": "AUDI-2", "regularCents": 12000 }
+
+### Delete it again (seats, holds and bookings go with it)
+DELETE {{booking}}/admin/shows/DEMO-1

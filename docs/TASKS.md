@@ -19,9 +19,14 @@
 
 ## 1. Catalog and seat map
 
-- [ ] Movies, screens with a seat layout, shows; seats per show with a price tier
-- [ ] `GET /shows`, `GET /shows/:id` with the seat map
-- [ ] UI: pick a user name, list shows, read-only seat map
+- [x] Movies, screens with a seat layout, shows; one `show_seats` row per seat per show with its
+      tier and price (migration `001_catalog.sql`, seeds SHOW-1 to SHOW-4)
+- [x] `GET /shows` (free and total seats), `GET /shows/:id` with the seat map,
+      `POST /admin/shows` and `DELETE /admin/shows/:id` for tests and demos
+- [x] UI: pick a user name (per browser tab), list shows, read-only seat map with an aisle and legend
+- [x] Verified: 17 API checks (seeded layouts of 96 and 32 seats, premium rows G-H at 350.00, row
+      and column order, 404 `SHOW_NOT_FOUND`, 400 on a bad id, create, 409 `SHOW_EXISTS`, delete);
+      7 browser checks (login, show cards, 96 seats, status page, no page errors)
 
 ## 2. Seat holds
 
