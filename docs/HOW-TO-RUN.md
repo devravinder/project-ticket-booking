@@ -27,12 +27,11 @@ Paths that differ in your registry go in `infra/retag-images.local.json` (git-ig
 ```bash
 pnpm install
 pnpm start:pods        # Postgres :5435, Redis :6381; waits until both are healthy
-pnpm start:services    # booking-service :7001 and payment-gateway :7002
-pnpm start:web         # http://localhost:5210
+pnpm start:services    # everything: booking :7001 and :7011, gateway :7002, web http://localhost:5210
 ```
 
-Each service can also run on its own: `pnpm start:booking`, `pnpm start:gateway`. A second booking
-instance on :7011 (same database) is `pnpm start:booking:2`. To see the live map cross instances,
+Each app can also run on its own: `pnpm start:booking`, `pnpm start:booking:2` (second instance,
+same database), `pnpm start:gateway`, `pnpm start:web`. To see the live map cross instances,
 open a show in two tabs and pick "via instance :7011" in one of them.
 
 ## Ports

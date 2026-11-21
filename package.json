@@ -14,7 +14,7 @@
     "stop:pods": "docker compose -f infra/docker-compose.yaml down",
     "reset:pods": "docker compose -f infra/docker-compose.yaml down -v",
     "logs:pods": "docker compose -f infra/docker-compose.yaml logs -f",
-    "start:services": "pnpm --parallel --filter @tix/booking-service --filter @tix/payment-gateway dev",
+    "start:services": "pnpm -r --parallel --filter @tix/booking-service --filter @tix/payment-gateway --filter @tix/web run \"/^dev(:2)?$/\"",
     "start:booking": "pnpm --filter @tix/booking-service dev",
     "start:booking:2": "pnpm --filter @tix/booking-service dev:2",
     "start:gateway": "pnpm --filter @tix/payment-gateway dev",

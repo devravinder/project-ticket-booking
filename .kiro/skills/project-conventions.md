@@ -35,6 +35,12 @@ description: How this repo is organised, what every task must update, and cross-
   `git grep --cached -i -n -w -E "<org terms>"` must find nothing.
 - Commits: Conventional, lowercase subject, under 10 words, one commit at the end of each task.
 
+## Scripts
+
+`pnpm start:services` runs every app in one terminal: `pnpm -r --parallel run "/^dev(:2)?$/"`.
+A regex script name matches `dev` and `dev:2`, so the second booking instance starts too.
+A new app joins by having a `dev` script and a `--filter` in that command.
+
 ## Ports
 
 booking 7001 (second instance 7011), gateway 7002, web 5210, Postgres 5435, Redis 6381.
