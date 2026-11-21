@@ -17,8 +17,16 @@ description: Rules for any code that changes a seat, hold or booking in the book
 ## Locks
 
 - Lock seats in seat-number order (sort the request; `ORDER BY seat_no FOR UPDATE`).
-- Lock order across tables: booking, then hold, then seats.
+- Lock order across tables: hold, then booking, then seats. `settle` locks the hold through
+  `bookings.hold_id` before the booking; the sweeper and release already start at the hold.
 - Background jobs that two instances run claim rows with `FOR UPDATE SKIP LOCKED`.
+
+## Payment results
+
+- Every result (webhook, return, reconciliation) goes through `BookingsService.settle(c, ...)`.
+  Never change a booking's status anywhere else.
+- Write a `booking_log` entry with every change; the timeline is how a person debugs it.
+- No HTTP call inside a transaction. Commit, call the gateway, then record in a new transaction.
 
 ## Freeing seats
 

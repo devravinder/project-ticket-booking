@@ -115,6 +115,20 @@ export function ShowPage({ user, showId, onBack }: Props) {
 function HoldCard({ user, hold, onChange }: { user: string; hold: Hold; onChange: () => void }) {
   const left = useCountdown(hold.expiresAt);
   const [error, setError] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  // The gateway's page takes over the tab; it sends us back to /?booking=<id>.
+  const pay = async () => {
+    setPaying(true);
+    try {
+      const booking = await api.checkout(user, hold.id);
+      if (booking.payUrl && booking.status === "PENDING_PAYMENT")
+        window.location.assign(booking.payUrl);
+      else setError(`booking is ${booking.status.toLowerCase()}`);
+    } catch (e) {
+      setError(errorText(e));
+      setPaying(false);
+    }
+  };
   const release = async () => {
     try {
       await api.release(user, hold.id);
@@ -139,7 +153,14 @@ function HoldCard({ user, hold, onChange }: { user: string; hold: Hold; onChange
         {hold.seats.join(", ")} · {money(hold.amountCents)}
       </p>
       <p className="text-xs text-gray-500">hold {hold.id.slice(0, 8)}</p>
-      <button className="mt-3 w-full rounded border py-1 text-sm" onClick={() => void release()}>
+      <button
+        className="mt-3 w-full rounded bg-blue-700 py-2 font-medium text-white disabled:opacity-40"
+        disabled={paying || !left}
+        onClick={() => void pay()}
+      >
+        Pay {money(hold.amountCents)}
+      </button>
+      <button className="mt-2 w-full rounded border py-1 text-sm" onClick={() => void release()}>
         Release seats
       </button>
       {error && <p className="mt-1 text-sm text-red-700">{error}</p>}

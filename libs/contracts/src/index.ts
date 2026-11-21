@@ -109,3 +109,27 @@ export type WebhookDelivery = {
 };
 
 export type GatewaySessionDetail = GatewaySession & { webhooks: WebhookDelivery[] };
+
+export type BookingStatus =
+  "PENDING_PAYMENT" | "CONFIRMED" | "PAYMENT_FAILED" | "EXPIRED" | "REFUND_PENDING" | "REFUNDED";
+
+export type BookingLogEntry = { at: string; what: string; detail: string | null };
+
+export type Booking = {
+  id: string;
+  holdId: string;
+  showId: string;
+  user: string;
+  seats: string[];
+  amountCents: number;
+  status: BookingStatus;
+  sessionId: string | null;
+  payUrl: string | null;
+  // The gateway session ends here, a margin before the hold does (ADR-010).
+  paymentExpiresAt: string;
+  holdExpiresAt: string;
+  failureReason: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  log: BookingLogEntry[];
+};

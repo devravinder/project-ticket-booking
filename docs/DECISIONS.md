@@ -198,3 +198,57 @@ Rejected:
 
 - Delivering webhooks straight from the request handler: a crash after the commit loses the event.
 - A mock that answers instantly and always succeeds: none of the failure cases would happen.
+
+## ADR-010 - Checkout: confirm exactly once, whoever brings the news
+
+Date: 2026-11-21 - Status: Accepted
+
+A payment result can reach the booking service three ways: the **webhook**, the customer's
+**return** to the shop, and (Task 6) **reconciliation**. Any of them may come twice, late, or at
+the same moment on two instances. All three call one function, `settle`, which:
+
+1. locks the hold, then the booking row (`FOR UPDATE`), so concurrent callers queue up;
+2. reads the booking's status and does nothing if the result was already applied ("already
+   handled" in the timeline);
+3. applies the result and writes the timeline entry in the same transaction.
+
+Webhooks also go through `webhook_inbox` (event id primary key), inserted in that transaction, so
+a duplicate delivery is acknowledged with 200 and ignored. The return never trusts
+`?status=PAID` in the URL: anyone can type it. `POST /bookings/:id/verify` asks the gateway's status
+API instead.
+
+**Checkout** is idempotent: one booking per hold (unique `hold_id`), and the gateway session is
+created with the key `booking-<id>` after the booking row has committed. If the gateway is down the
+customer gets 502 and the booking waits without a session; pressing Pay again sends the same key
+and gets one session, never two.
+
+**The payment window** ends `paymentMarginMs` (10 s) before the hold. A customer who pays at the last
+second still has the hold while the bank answers. If the bank answers after the hold anyway
+(`slowPayMs`), confirm still books the seats when they are free; only if someone else took them is
+the booking `REFUND_PENDING` (Task 6 refunds it).
+
+**Failure is compensated at once:** a declined card frees the seats immediately instead of making
+everyone wait for the hold to expire.
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING_PAYMENT: checkout
+  PENDING_PAYMENT --> CONFIRMED: PAID and the seats are ours
+  PENDING_PAYMENT --> PAYMENT_FAILED: DECLINED, seats released
+  PENDING_PAYMENT --> EXPIRED: hold ended or released
+  EXPIRED --> CONFIRMED: paid late, seats still free
+  EXPIRED --> REFUND_PENDING: paid late, seats taken
+  PENDING_PAYMENT --> REFUND_PENDING: PAID but seats taken
+  REFUND_PENDING --> REFUNDED: refund.succeeded
+```
+
+Rejected:
+
+- Trusting the redirect: a free ticket for anyone who edits the URL.
+- Calling the gateway inside the checkout transaction: a slow gateway would hold the hold's row lock
+  for seconds, and a timeout would leave us unsure whether a session exists.
+- Webhook only, no verify on return: when a webhook is late the customer stares at "pending"
+  although they paid.
+- A "processed" flag on the booking instead of an inbox: it cannot tell a duplicate of event A
+  from a new event B about the same booking (for example `refund.succeeded` after
+  `payment.succeeded`).

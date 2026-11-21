@@ -86,10 +86,8 @@ export class HoldsService {
       if (hold.user_name !== user) fail(403, "NOT_YOUR_HOLD", "this hold belongs to someone else");
       if (hold.status === "BOOKED") fail(409, "HOLD_BOOKED", "these seats are already booked");
       if (hold.status === "HELD") {
-        await this.freeSeats(c, [holdId]);
-        await c.query("UPDATE holds SET status = 'RELEASED', updated_at = now() WHERE id = $1", [
-          holdId,
-        ]);
+        await this.freeHold(c, holdId, "RELEASED");
+        await this.endCheckouts(c, [holdId], "released by you");
       }
       return this.view(c, holdId);
     });
@@ -104,11 +102,11 @@ export class HoldsService {
        RETURNING id, show_id AS "showId"`,
       [limit],
     );
-    if (rows.length)
-      await this.freeSeats(
-        c,
-        rows.map((r) => r.id),
-      );
+    if (rows.length) {
+      const ids = rows.map((r) => r.id);
+      await this.freeSeats(c, ids);
+      await this.endCheckouts(c, ids, "hold expired before payment");
+    }
     return rows;
   }
 
@@ -125,6 +123,27 @@ export class HoldsService {
       [user, showId ?? null],
     );
     return rows;
+  }
+
+  // Frees what this hold still has and closes it; a hold already closed is left alone.
+  async freeHold(c: Tx, holdId: string, status: "RELEASED" | "EXPIRED"): Promise<void> {
+    await this.freeSeats(c, [holdId]);
+    await c.query(
+      "UPDATE holds SET status = $2, updated_at = now() WHERE id = $1 AND status = 'HELD'",
+      [holdId, status],
+    );
+  }
+
+  // A checkout still waiting for money ends with its hold; a late payment is handled on arrival.
+  private async endCheckouts(c: Tx, holdIds: string[], reason: string): Promise<void> {
+    const { rows } = await c.query<{ id: string }>(
+      `UPDATE bookings SET status = 'EXPIRED', failure_reason = $2, updated_at = now()
+       WHERE hold_id = ANY($1) AND status = 'PENDING_PAYMENT' RETURNING id`,
+      [holdIds, reason],
+    );
+    for (const { id } of rows) {
+      await c.query("INSERT INTO booking_log (booking_id, what) VALUES ($1, $2)", [id, reason]);
+    }
   }
 
   private async view(c: Tx, holdId: string): Promise<Hold> {

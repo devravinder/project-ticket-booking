@@ -45,6 +45,12 @@ open a show in two tabs and pick "via instance :7011" in one of them.
 | Postgres        | 5435 | user `tix` / `tix`; databases `booking`, `gateway` |
 | Redis           | 6381 | no persistence                                     |
 
+## Book a seat
+
+1. Shows, open a show, click seats, Hold. The timer starts at 1:00.
+2. Pay takes you to the gateway's page (FakePay). Pay or Decline there.
+3. You come back to My bookings with the result and a timeline of what happened.
+
 ## Check
 
 - `http://localhost:5210` - the Status tab shows every service and dependency.
@@ -66,6 +72,9 @@ restarting a service resets them; each panel also has a Reset button.
 
 - **Same seat, same moment:** N people hold one seat at once, in `atomic`, `pessimistic` or `naive`
   mode, optionally split over both booking instances.
+- **Checkout and payment:** pay and confirm, card declined, duplicate webhooks, lost webhook
+  recovered by the return, webhook and returns racing, customer walks away. Each run shows a
+  verdict and the booking's timeline.
 - **Live seat map across instances:** LISTEN stats per instance and a button that drops the
   connection.
 - **Payment gateway log:** sessions, every webhook attempt, Redeliver.

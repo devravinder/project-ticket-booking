@@ -1,4 +1,6 @@
+import { CheckoutLab } from "./checkout-lab.js";
 import { GatewayLog } from "./gateway-log.js";
+import { CHECKOUT_SCENARIOS } from "./scenarios.js";
 import { LiveScenario } from "./live-scenario.js";
 import { RaceScenario } from "./race.js";
 import { SwitchesPanel } from "./switches-panel.js";
@@ -8,6 +10,7 @@ export function Lab() {
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="space-y-6">
         <RaceScenario />
+        <CheckoutLab title="Checkout and payment" scenarios={CHECKOUT_SCENARIOS} />
         <LiveScenario />
         <GatewayLog />
       </div>

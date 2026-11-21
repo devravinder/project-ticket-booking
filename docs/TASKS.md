@@ -85,8 +85,27 @@
 
 ## 5. Checkout
 
-- [ ] Hold, then pay, then confirm exactly once (webhook and redirect may race)
-- [ ] Decline releases the seats; the payment session ends before the hold does
+- [x] `POST /holds/:id/checkout`: one booking per hold, a gateway session per booking (key
+      `booking-<id>`), created outside any transaction; a retry after a gateway outage reuses it
+- [x] The payment session ends `paymentMarginMs` (10 s) before the hold; less than 3 s left is
+      409 `HOLD_EXPIRING`
+- [x] `POST /webhooks/gateway`: signature over the raw body, 5-minute window, `webhook_inbox` for
+      duplicates, the effect in the same transaction
+- [x] `POST /bookings/:id/verify`: the return from the gateway asks the gateway; the redirect's
+      `status` is never trusted
+- [x] Confirm locks hold, then booking, then seats; books the seats if they are still this hold's
+      or free again, otherwise `REFUND_PENDING`. Decline releases the seats at once; an unpaid hold
+      expires the booking; releasing a hold ends its checkout
+- [x] `booking_log` timeline; `GET /bookings` (mine), `GET /bookings/:id`
+- [x] UI: Pay on the hold card goes to the gateway page and back to My bookings, which shows the
+      status and timeline; Lab "Checkout and payment" card with 6 scenarios and their verdicts
+- [x] Verified: 37 API checks. Webhook confirms; checkout is idempotent; a webhook and two returns
+      on two instances book once ("already handled" for the rest); a dropped webhook is recovered
+      by the return; duplicates are ignored by the inbox; decline frees the seats; unsigned, wrongly
+      signed and 10-minute-old webhooks get 401 and change nothing; a result for another session is
+      ignored; abandoned checkouts expire with the hold; gateway down gives 502, then the retry gets
+      a session and confirms. 18 browser checks: real pay page round trip, decline on the page, live
+      grey seat for the other viewer, all 6 Lab scenarios pass
 
 ## 6. Failure lab
 

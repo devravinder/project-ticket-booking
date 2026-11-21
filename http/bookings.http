@@ -1,0 +1,46 @@
+@booking = http://localhost:7001
+@gateway = http://localhost:7002
+
+### 1. Hold a seat
+# @name hold
+POST {{booking}}/shows/SHOW-2/holds
+Content-Type: application/json
+X-User: alice
+
+{ "seats": ["D7"] }
+
+### 2. Check out: booking PENDING_PAYMENT with a gateway session and payUrl (repeat-safe)
+# @name checkout
+POST {{booking}}/holds/{{hold.response.body.id}}/checkout
+X-User: alice
+
+### 3a. Pay in a browser: {{checkout.response.body.payUrl}}
+### 3b. ...or press Pay without the page (decline: "outcome": "decline")
+POST {{gateway}}/sessions/{{checkout.response.body.sessionId}}/pay
+Content-Type: application/json
+
+{ "outcome": "approve" }
+
+### 4. The booking with its timeline (CONFIRMED once the webhook arrived)
+GET {{booking}}/bookings/{{checkout.response.body.id}}
+
+### What the web app calls on return from the gateway: asks the gateway, applies the result once
+POST {{booking}}/bookings/{{checkout.response.body.id}}/verify
+
+### My bookings
+GET {{booking}}/bookings
+X-User: alice
+
+### A forged webhook: 401 INVALID_SIGNATURE
+POST {{booking}}/webhooks/gateway
+Content-Type: application/json
+Gateway-Signature: t=1700000000,v1=00
+
+{ "id": "evt_fake", "type": "payment.succeeded", "createdAt": "2026-01-01T00:00:00Z",
+  "data": { "sessionId": "ps_x", "merchantRef": "x", "amountCents": 1, "status": "PAID" } }
+
+### Lab: the payment session ends this long before the hold
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "paymentMarginMs": 10000 }

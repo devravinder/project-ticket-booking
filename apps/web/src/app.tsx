@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "./api.js";
+import { Bookings } from "./components/bookings.js";
 import { Health } from "./components/health.js";
 import { Lab } from "./components/lab/lab.js";
 import { ShowPage } from "./components/show-page.js";
@@ -7,17 +9,32 @@ import { Shows } from "./components/shows.js";
 // Per tab, so two tabs can be two people racing for one seat.
 const SESSION_KEY = "tix.user";
 
-type Tab = "shows" | "lab" | "status";
+type Tab = "shows" | "bookings" | "lab" | "status";
 const TABS: { id: Tab; label: string }[] = [
   { id: "shows", label: "Shows" },
+  { id: "bookings", label: "My bookings" },
   { id: "lab", label: "Lab" },
   { id: "status", label: "Status" },
 ];
 
+// The gateway sends the customer back to /?booking=<id>&session=..&status=..
+const returning = new URLSearchParams(window.location.search).get("booking");
+// StrictMode runs effects twice in development; one verify per return is enough.
+let verified = false;
+
 export function App() {
   const [user, setUser] = useState(() => sessionStorage.getItem(SESSION_KEY));
-  const [tab, setTab] = useState<Tab>("shows");
+  const [tab, setTab] = useState<Tab>(returning ? "bookings" : "shows");
   const [showId, setShowId] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(returning);
+
+  useEffect(() => {
+    if (!returning || verified) return;
+    verified = true;
+    window.history.replaceState(null, "", "/");
+    // The status in the URL is only a hint: the booking service asks the gateway (ADR-010).
+    api.verify(returning).catch(() => undefined);
+  }, []);
 
   if (!user) {
     return (
@@ -66,6 +83,9 @@ export function App() {
           ) : (
             <Shows onOpen={setShowId} />
           ))}
+        {tab === "bookings" && (
+          <Bookings user={user} selected={bookingId} onSelect={setBookingId} />
+        )}
         {tab === "lab" && <Lab />}
         {tab === "status" && <Health />}
       </main>

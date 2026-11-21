@@ -1,4 +1,5 @@
 import {
+  type Booking,
   type GatewaySession,
   type GatewaySessionDetail,
   type Health,
@@ -78,6 +79,19 @@ export const api = {
     request<{ dropped: boolean }>(service, "/admin/live/drop-connection", { method: "POST" }),
   release: (user: string, holdId: string) =>
     request<Hold>("booking", `/holds/${holdId}`, { method: "DELETE", headers: as(user) }),
+  checkout: (user: string, holdId: string) =>
+    request<Booking>("booking", `/holds/${holdId}/checkout`, { method: "POST", headers: as(user) }),
+  bookings: (user: string) => request<Booking[]>("booking", "/bookings", { headers: as(user) }),
+  booking: (id: string) => request<Booking>("booking", `/bookings/${id}`),
+  verify: (id: string) => api.verifyVia("booking", id),
+  verifyVia: (service: ServiceName, id: string) =>
+    request<Booking>(service, `/bookings/${id}/verify`, { method: "POST" }),
+  // Lab: press Pay or Decline on the gateway without opening its page.
+  gatewayPay: (sessionId: string, outcome: "approve" | "decline") =>
+    request<GatewaySession>("gateway", `/sessions/${sessionId}/pay`, {
+      method: "POST",
+      body: json({ outcome }),
+    }),
   switches: (service: ServiceName) => request<Switches>(service, "/admin/switches"),
   setSwitches: (service: ServiceName, patch: Switches) =>
     request<Switches>(service, "/admin/switches", { method: "PUT", body: json(patch) }),

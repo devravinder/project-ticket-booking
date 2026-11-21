@@ -114,3 +114,29 @@ sequenceDiagram
   G->>M: POST webhook payment.succeeded (signed)
   M-->>G: 200 (else retried with backoff)
 ```
+
+## Checkout
+
+Every way a payment result arrives (webhook, the customer's return, reconciliation) ends in one
+`settle` call, which locks the hold and the booking and applies the result once (ADR-010).
+
+```mermaid
+sequenceDiagram
+  participant C as customer
+  participant B as booking-service
+  participant G as payment-gateway
+  C->>B: POST /holds/:id/checkout
+  B->>B: booking PENDING_PAYMENT (commit)
+  B->>G: POST /sessions (key booking-id, ends 10 s before the hold)
+  B-->>C: payUrl
+  C->>G: pay
+  par webhook
+    G->>B: payment.succeeded (signed)
+    B->>B: inbox + settle: seats BOOKED
+  and return
+    G-->>C: 303 to /?booking=id
+    C->>B: POST /bookings/:id/verify
+    B->>G: GET /sessions/:id
+    B->>B: settle: already handled
+  end
+```
