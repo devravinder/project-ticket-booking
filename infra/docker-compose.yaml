@@ -1,0 +1,41 @@
+# Local infrastructure only; the services and the web app run on the host.
+# Host ports avoid the defaults so this can run next to other projects.
+name: ticket-booking
+
+services:
+  # One container; the booking service and the fake gateway each get a database and role.
+  postgres:
+    image: postgres:latest
+    container_name: tix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tix
+      POSTGRES_PASSWORD: tix
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      # Runs only when the data volume is empty (first start or after reset:pods).
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tix -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Waiting-room queue only: losing it on restart just empties the line.
+  redis:
+    image: redis:6.2.24
+    container_name: tix-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

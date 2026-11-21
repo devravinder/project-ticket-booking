@@ -1,0 +1,52 @@
+import { type Health, USER_HEADER } from "@tix/contracts";
+
+export type ServiceName = "booking" | "booking-2" | "gateway";
+export type Switches = Record<string, string | number | boolean>;
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly body: Record<string, unknown> | null,
+  ) {
+    super(message);
+  }
+}
+
+async function request<T>(service: ServiceName, path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`/api/${service}${path}`, {
+    ...init,
+    headers: { "content-type": "application/json", ...init.headers },
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      body?.code ?? "HTTP_ERROR",
+      body?.message ?? `${service}: HTTP ${response.status}`,
+      body,
+    );
+  }
+  return body as T;
+}
+
+export const as = (user: string) => ({ [USER_HEADER]: user });
+const json = (value: unknown) => JSON.stringify(value);
+
+export const api = {
+  // A 503 still carries the checks, so the status page can say what is down.
+  health: async (service: ServiceName): Promise<Health> => {
+    try {
+      return await request<Health>(service, "/health");
+    } catch (error) {
+      if (error instanceof ApiError && error.body?.service) return error.body as Health;
+      throw error;
+    }
+  },
+  switches: (service: ServiceName) => request<Switches>(service, "/admin/switches"),
+  setSwitches: (service: ServiceName, patch: Switches) =>
+    request<Switches>(service, "/admin/switches", { method: "PUT", body: json(patch) }),
+  resetSwitches: (service: ServiceName) =>
+    request<Switches>(service, "/admin/switches/reset", { method: "PUT" }),
+};

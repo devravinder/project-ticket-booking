@@ -1,0 +1,24 @@
+@booking = http://localhost:7001
+@booking2 = http://localhost:7011
+@gateway = http://localhost:7002
+
+### booking-service: Postgres and Redis
+GET {{booking}}/health
+
+### Second booking instance (pnpm start:booking:2)
+GET {{booking2}}/health
+
+### payment-gateway: Postgres only
+GET {{gateway}}/health
+
+### Switches (runtime knobs; a restart resets them)
+GET {{booking}}/admin/switches
+
+### Unknown switch: 400 UNKNOWN_SWITCH
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "nope": 1 }
+
+### Back to defaults
+PUT {{booking}}/admin/switches/reset
