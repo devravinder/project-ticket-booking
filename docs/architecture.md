@@ -94,3 +94,23 @@ sequenceDiagram
   S2->>P: read seat C4
   S2-->>B: seats C4 HELD
 ```
+
+## Payment gateway
+
+The gateway is a separate service with its own database (ADR-002). It records each status change
+together with a webhook row, and a deliverer sends the webhooks until they are acknowledged (ADR-009).
+
+```mermaid
+sequenceDiagram
+  participant M as merchant (booking-service)
+  participant G as payment-gateway
+  participant C as customer browser
+  M->>G: POST /sessions (Idempotency-Key)
+  G-->>M: session + payUrl
+  C->>G: GET /pay/ps_..
+  C->>G: Pay
+  G->>G: PAID + webhook row, one transaction
+  G-->>C: 303 to returnUrl?session=..&status=PAID
+  G->>M: POST webhook payment.succeeded (signed)
+  M-->>G: 200 (else retried with backoff)
+```

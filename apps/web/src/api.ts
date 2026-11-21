@@ -1,4 +1,6 @@
 import {
+  type GatewaySession,
+  type GatewaySessionDetail,
   type Health,
   type Hold,
   type LiveStats,
@@ -68,6 +70,10 @@ export const api = {
     }),
   getHold: (id: string) => request<Hold>("booking", `/holds/${id}`),
   liveStats: (service: ServiceName) => request<LiveStats>(service, "/admin/live"),
+  gatewaySessions: () => request<GatewaySession[]>("gateway", "/admin/sessions"),
+  gatewaySession: (id: string) => request<GatewaySessionDetail>("gateway", `/admin/sessions/${id}`),
+  redeliver: (eventId: string) =>
+    request<unknown>("gateway", `/admin/webhooks/${eventId}/redeliver`, { method: "POST" }),
   dropLive: (service: ServiceName) =>
     request<{ dropped: boolean }>(service, "/admin/live/drop-connection", { method: "POST" }),
   release: (user: string, holdId: string) =>

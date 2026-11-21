@@ -165,3 +165,36 @@ Rejected:
   `NOTIFY` is transactional with the seat change for free.
 - Sending the change from application code after `COMMIT`: a crash between the two loses the
   event, and a send before `COMMIT` can announce a change that is then rolled back.
+
+## ADR-009 - The fake gateway behaves like a real one
+
+Date: 2026-11-21 - Status: Accepted
+
+The gateway copies the parts of Stripe Checkout or Razorpay that cause trouble for a merchant:
+
+- **Sessions with an idempotency key.** The merchant creates a payment session with an
+  `Idempotency-Key`. A retry with the same key and body returns the first session (200,
+  `Idempotent-Replayed: true`); the same key with another body is 422. A merchant whose request
+  timed out can therefore simply send it again.
+- **A hosted pay page.** The customer pays on the gateway's page, not the merchant's. Afterwards the
+  browser is redirected to `returnUrl?session=..&status=..`. Anyone can type that URL, so the
+  merchant must treat it as a hint and confirm with the gateway (Task 5).
+- **Expiry.** A session ends at `expiresAt` (the merchant sets it). A payment started before then
+  may finish after it (`slowPayMs`): banks answer late, and that is the late-payment case.
+- **Webhooks from an outbox.** The event row is inserted in the transaction that changes the
+  session's status, so there is never a status change without its event, or the reverse. A
+  deliverer claims due events with a 30-second lease (committed before the HTTP call), posts them
+  and retries with backoff. Delivery is **at least once**: the merchant must accept duplicates.
+- **Signatures.** `Gateway-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "t.body")>`. The
+  receiver checks it in constant time and refuses signatures older than 5 minutes (replays).
+  The shared secret is `WEBHOOK_SECRET` in both `.env.sample` files: a local value only.
+- **Status API and refunds.** `GET /sessions/:id` answers "what happened to this payment?"; a refund
+  takes its own idempotency key and happens once.
+
+Known gap: a gateway crash during `slowPayMs` leaves the session `PROCESSING`. A real gateway would
+resolve it with the bank; this one does not.
+
+Rejected:
+
+- Delivering webhooks straight from the request handler: a crash after the commit loses the event.
+- A mock that answers instantly and always succeeds: none of the failure cases would happen.

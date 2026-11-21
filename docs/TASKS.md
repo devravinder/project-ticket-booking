@@ -66,8 +66,22 @@
 
 ## 4. Fake payment gateway
 
-- [ ] Payment sessions, hosted pay page, signed webhooks with retries, status API, refunds
-- [ ] Switches: slow payment, dropped and duplicate webhooks, no redirect back
+- [x] `POST /sessions` (`Idempotency-Key` required; replay 200, other body 422), `GET /sessions/:id`
+      (the status API), hosted pay page `GET /pay/:id` with Pay and Decline and a countdown,
+      `POST /sessions/:id/pay` (the same as a button, for tests), `POST /sessions/:id/refund`
+- [x] Webhook outbox (`webhook_events`) written with the status change; a deliverer claims due
+      events with a lease, signs them (`Gateway-Signature: t=..,v1=HMAC-SHA256`), retries with
+      backoff (0.5 s doubling to 10 s, 25 attempts)
+- [x] Switches: `slowPayMs`, `webhookDelayMs`, `dropWebhooks`, `duplicateWebhooks`, `redirectBack`;
+      `POST /admin/webhooks/:id/redeliver`
+- [x] Lab: gateway switches panel and a sessions log with each webhook's attempts, errors and a
+      Redeliver button
+- [x] Verified: 33 API checks against a local webhook receiver (signatures valid and fresh; 3 x 500
+      then delivered on attempt 4 with gaps of 0.8, 1.0 and 2.1 s; `ECONNREFUSED` while the receiver
+      is down, delivered after; dropped then redelivered; duplicates carry the same event id; an
+      expired session refuses payment; a payment started in time still finishes after expiry;
+      refunds are idempotent per key, 409 for another key or a declined payment). 8 browser checks
+      (pay page, redirect back with session and status, Lab log)
 
 ## 5. Checkout
 

@@ -1,0 +1,46 @@
+@gateway = http://localhost:7002
+
+### Create a payment session (replaying the same key returns the same session)
+# @name session
+POST {{gateway}}/sessions
+Content-Type: application/json
+Idempotency-Key: demo-session-0001
+
+{
+  "merchantRef": "demo-booking-1",
+  "amountCents": 30000,
+  "returnUrl": "http://localhost:5210/",
+  "webhookUrl": "http://localhost:7001/webhooks/gateway",
+  "expiresAt": "2030-01-01T00:00:00Z"
+}
+
+### Open this in a browser to pay: {{session.response.body.payUrl}}
+GET {{gateway}}/pay/{{session.response.body.id}}
+
+### Status API: what a merchant asks when it never heard back
+GET {{gateway}}/sessions/{{session.response.body.id}}
+
+### Pay without the page (tests and Lab); outcome approve or decline
+POST {{gateway}}/sessions/{{session.response.body.id}}/pay
+Content-Type: application/json
+
+{ "outcome": "approve" }
+
+### Refund (once per session; same key again is harmless)
+POST {{gateway}}/sessions/{{session.response.body.id}}/refund
+Idempotency-Key: demo-refund-0001
+
+### The session with every webhook attempt
+GET {{gateway}}/admin/sessions/{{session.response.body.id}}
+
+### Recent sessions
+GET {{gateway}}/admin/sessions
+
+### Lab: slow bank, lost webhooks, duplicates, no redirect back
+PUT {{gateway}}/admin/switches
+Content-Type: application/json
+
+{ "slowPayMs": 0, "dropWebhooks": false, "duplicateWebhooks": false, "redirectBack": true }
+
+### Back to defaults
+PUT {{gateway}}/admin/switches/reset

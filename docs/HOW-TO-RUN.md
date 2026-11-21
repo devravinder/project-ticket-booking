@@ -48,7 +48,27 @@ open a show in two tabs and pick "via instance :7011" in one of them.
 ## Check
 
 - `http://localhost:5210` - the Status tab shows every service and dependency.
-- `http/health.http` - REST Client requests (VS Code or JetBrains).
+- `http/*.http` - REST Client requests (VS Code or JetBrains).
+
+## Environment
+
+Each service reads `apps/<service>/.env.sample` (local values only, no real secrets):
+
+| Variable         | Service         | Meaning                                             |
+| ---------------- | --------------- | --------------------------------------------------- |
+| `PUBLIC_URL`     | payment-gateway | where the browser reaches the pay page              |
+| `WEBHOOK_SECRET` | both            | signs and checks webhooks; must be the same in both |
+
+## Lab
+
+The Lab tab has a card per scenario and the switches of every service. Switches live in memory, so
+restarting a service resets them; each panel also has a Reset button.
+
+- **Same seat, same moment:** N people hold one seat at once, in `atomic`, `pessimistic` or `naive`
+  mode, optionally split over both booking instances.
+- **Live seat map across instances:** LISTEN stats per instance and a button that drops the
+  connection.
+- **Payment gateway log:** sessions, every webhook attempt, Redeliver.
 
 ## Stop and reset
 

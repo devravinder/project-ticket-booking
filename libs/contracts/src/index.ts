@@ -71,3 +71,41 @@ export type LiveStats = {
   reconnects: number;
   viewers: Record<string, number>;
 };
+
+// The same key on a retry returns the first result instead of doing the work twice.
+export const IDEMPOTENCY_HEADER = "idempotency-key";
+
+export type SessionStatus = "OPEN" | "PROCESSING" | "PAID" | "DECLINED" | "EXPIRED" | "REFUNDED";
+
+export type GatewaySession = {
+  id: string;
+  merchantRef: string;
+  amountCents: number;
+  status: SessionStatus;
+  payUrl: string;
+  returnUrl: string;
+  expiresAt: string;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+export type WebhookType = "payment.succeeded" | "payment.failed" | "refund.succeeded";
+
+export type WebhookEvent = {
+  id: string;
+  type: WebhookType;
+  createdAt: string;
+  data: { sessionId: string; merchantRef: string; amountCents: number; status: SessionStatus };
+};
+
+export type WebhookDelivery = {
+  id: string;
+  type: WebhookType;
+  status: "PENDING" | "DELIVERED" | "DROPPED" | "GAVE_UP";
+  attempts: number;
+  lastError: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+};
+
+export type GatewaySessionDetail = GatewaySession & { webhooks: WebhookDelivery[] };

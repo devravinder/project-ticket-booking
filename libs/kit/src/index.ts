@@ -5,3 +5,10 @@ export { KitModule, type KitOptions } from "./kit.module.js";
 export { Redis } from "./redis.js";
 export { type SwitchChoices, type SwitchDefaults, Switches } from "./switches.js";
 export { backoffMs, fail, parse, sleep, USER_HEADER, userSchema } from "./util.js";
+export {
+  SIGNATURE_HEADER,
+  SIGNATURE_TOLERANCE_S,
+  type SignatureCheck,
+  signWebhook,
+  verifyWebhook,
+} from "./webhook-signature.js";
