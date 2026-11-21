@@ -1,4 +1,10 @@
-import { type Health, type ShowDetail, type ShowSummary, USER_HEADER } from "@tix/contracts";
+import {
+  type Health,
+  type Hold,
+  type ShowDetail,
+  type ShowSummary,
+  USER_HEADER,
+} from "@tix/contracts";
 
 export type ServiceName = "booking" | "booking-2" | "gateway";
 export type Switches = Record<string, string | number | boolean>;
@@ -46,6 +52,22 @@ export const api = {
   },
   shows: () => request<ShowSummary[]>("booking", "/shows"),
   show: (id: string) => request<ShowDetail>("booking", `/shows/${id}`),
+  hold: (user: string, showId: string, seats: string[]) =>
+    api.holdVia("booking", user, showId, seats),
+  // The Lab sends some racers to the second instance.
+  holdVia: (service: ServiceName, user: string, showId: string, seats: string[]) =>
+    request<Hold>(service, `/shows/${showId}/holds`, {
+      method: "POST",
+      headers: as(user),
+      body: json({ seats }),
+    }),
+  myHolds: (user: string, showId: string) =>
+    request<Hold[]>("booking", `/holds?showId=${encodeURIComponent(showId)}`, {
+      headers: as(user),
+    }),
+  getHold: (id: string) => request<Hold>("booking", `/holds/${id}`),
+  release: (user: string, holdId: string) =>
+    request<Hold>("booking", `/holds/${holdId}`, { method: "DELETE", headers: as(user) }),
   switches: (service: ServiceName) => request<Switches>(service, "/admin/switches"),
   setSwitches: (service: ServiceName, patch: Switches) =>
     request<Switches>(service, "/admin/switches", { method: "PUT", body: json(patch) }),

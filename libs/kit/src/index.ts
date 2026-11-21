@@ -3,5 +3,5 @@ export { type BaseConfig, baseEnvSchema, loadConfig, SERVICE_CONFIG } from "./co
 export { Database, type Tx } from "./database.js";
 export { KitModule, type KitOptions } from "./kit.module.js";
 export { Redis } from "./redis.js";
-export { type SwitchDefaults, Switches } from "./switches.js";
+export { type SwitchChoices, type SwitchDefaults, Switches } from "./switches.js";
 export { backoffMs, fail, parse, sleep, USER_HEADER, userSchema } from "./util.js";

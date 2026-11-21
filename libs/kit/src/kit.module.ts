@@ -3,9 +3,16 @@ import { type BaseConfig, SERVICE_CONFIG } from "./config.js";
 import { Database } from "./database.js";
 import { HealthController } from "./health.controller.js";
 import { Redis } from "./redis.js";
-import { SWITCH_DEFAULTS, type SwitchDefaults, Switches, SwitchesController } from "./switches.js";
+import {
+  SWITCH_CHOICES,
+  SWITCH_DEFAULTS,
+  type SwitchChoices,
+  type SwitchDefaults,
+  Switches,
+  SwitchesController,
+} from "./switches.js";
 
-export type KitOptions = { switches?: SwitchDefaults };
+export type KitOptions = { switches?: SwitchDefaults; choices?: SwitchChoices };
 
 // What every service has: config, Postgres, optional Redis, switches, GET /health.
 @Module({})
@@ -18,6 +25,7 @@ export class KitModule {
       providers: [
         { provide: SERVICE_CONFIG, useValue: config },
         { provide: SWITCH_DEFAULTS, useValue: options.switches ?? {} },
+        { provide: SWITCH_CHOICES, useValue: options.choices ?? {} },
         Database,
         Redis,
         Switches,

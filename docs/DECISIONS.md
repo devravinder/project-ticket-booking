@@ -74,3 +74,61 @@ Rejected:
   "any seat".
 - Seats only in `bookings`, free meaning "no booking row": a hold would then be an insert that has to
   be checked against expired rows, and the seat map needs a join with a `NOT EXISTS` for every seat.
+
+## ADR-006 - A hold is one conditional UPDATE, all or nothing
+
+Date: 2026-11-21 - Status: Accepted
+
+When two people press "Hold" on A7 in the same millisecond, the database decides:
+
+```sql
+UPDATE show_seats SET status = 'HELD', hold_id = $3, hold_expires_at = $4
+WHERE show_id = $1 AND seat_no = ANY($2)
+  AND (status = 'AVAILABLE' OR (status = 'HELD' AND hold_expires_at <= now()))
+RETURNING seat_no;
+```
+
+The second `UPDATE` waits for the first one's row lock, then re-checks the `WHERE` on the new row
+version and matches nothing. If fewer rows come back than seats were asked for, the transaction
+(including the new `holds` row) is rolled back and the caller gets 409 `SEATS_UNAVAILABLE` with the
+seats that were not free. The other seats are never held "half way".
+
+The `holdMode` switch shows the alternatives side by side:
+
+| Mode          | How                                                       | Result                                                  |
+| ------------- | --------------------------------------------------------- | ------------------------------------------------------- |
+| `atomic`      | the statement above                                       | one winner                                              |
+| `pessimistic` | `SELECT ... ORDER BY seat_no FOR UPDATE`, check, `UPDATE` | one winner, one more round trip                         |
+| `naive`       | `SELECT` without a lock, pause, unconditional `UPDATE`    | everyone is told "yours"; the last writer really has it |
+
+Seats are always locked in seat-number order (sorted request, `ORDER BY seat_no`), so overlapping
+multi-seat holds wait for each other instead of deadlocking: 40 overlapping 3-seat holds gave no
+deadlock. A deadlock would still be answered with 409 `DEADLOCK` and `retryable: true`.
+
+Rejected:
+
+- `SERIALIZABLE`: also correct, but the loser gets a serialization failure to retry instead of a
+  clear "seat taken".
+- A lock in Redis (`SET NX`) in front of the database: faster for very hot shows, but then two
+  systems must agree; Postgres is the source of truth here and is fast enough for one seat row.
+- A version column (optimistic locking): the conditional `UPDATE` already is the optimistic check,
+  without an extra column.
+
+## ADR-007 - Expired means free at once; the sweeper only tidies
+
+Date: 2026-11-21 - Status: Accepted
+
+A hold lasts `holdTtlMs` (60 000 ms by default, so the expiry is easy to watch). Every read and
+every hold treats `status = 'HELD' AND hold_expires_at <= now()` as free (`SEAT_IS_FREE` in
+`seat-sql.ts`), so a seat is back on sale the moment its hold expires, without waiting for a job.
+
+A sweeper on every instance runs each second: it marks due holds `EXPIRED`
+(`FOR UPDATE SKIP LOCKED`, so two instances never take the same hold) and frees only seats that
+still point at that hold. A seat someone else already took after the expiry keeps its new hold.
+
+Rejected:
+
+- Sweeper only: a seat would look taken for up to a second after its hold ended, and correctness
+  would depend on a background job running.
+- Redis keys with a TTL as the hold: an expired key vanishes without anyone telling the seat map,
+  and the booking would need both stores to agree.

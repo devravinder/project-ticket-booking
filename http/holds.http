@@ -1,0 +1,40 @@
+@booking = http://localhost:7001
+
+### Alice holds two seats (all or nothing, at most 6; expires after holdTtlMs)
+# @name aliceHold
+POST {{booking}}/shows/SHOW-3/holds
+Content-Type: application/json
+X-User: alice
+
+{ "seats": ["A1", "A2"] }
+
+### Bob wants A2 and A3: 409 SEATS_UNAVAILABLE with "unavailable": ["A2"]; A3 stays free
+POST {{booking}}/shows/SHOW-3/holds
+Content-Type: application/json
+X-User: bob
+
+{ "seats": ["A2", "A3"] }
+
+### The hold (status becomes EXPIRED once expiresAt passes)
+GET {{booking}}/holds/{{aliceHold.response.body.id}}
+
+### Alice's live holds for this show
+GET {{booking}}/holds?showId=SHOW-3
+X-User: alice
+
+### Bob cannot release it: 403 NOT_YOUR_HOLD
+DELETE {{booking}}/holds/{{aliceHold.response.body.id}}
+X-User: bob
+
+### Alice releases it (repeating is fine)
+DELETE {{booking}}/holds/{{aliceHold.response.body.id}}
+X-User: alice
+
+### Lab: naive mode with a visible gap, and a 10-second hold
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "holdMode": "naive", "naiveDelayMs": 300, "holdTtlMs": 10000 }
+
+### Back to defaults (atomic, 60 s)
+PUT {{booking}}/admin/switches/reset

@@ -40,3 +40,35 @@ A show copies its screen's seats into `show_seats` (ADR-005): one row per seat p
 concurrent buyers compete for.
 
 This document grows with each task.
+
+## Holds
+
+A hold keeps seats for one person while they pay. Two people asking for the same seat at once are
+decided by one conditional `UPDATE` (ADR-006); an expired hold frees its seats at once (ADR-007).
+
+```mermaid
+stateDiagram-v2
+  [*] --> HELD: POST /shows/:id/holds (every seat was free)
+  HELD --> RELEASED: DELETE /holds/:id
+  HELD --> EXPIRED: expiresAt passed (sweeper)
+  HELD --> BOOKED: payment confirmed (Task 5)
+  RELEASED --> [*]
+  EXPIRED --> [*]
+  BOOKED --> [*]
+```
+
+```mermaid
+sequenceDiagram
+  participant A as alice
+  participant B as bob
+  participant S as booking-service
+  participant P as Postgres
+  A->>S: hold B1
+  B->>S: hold B1
+  S->>P: UPDATE B1 WHERE free (alice)
+  S->>P: UPDATE B1 WHERE free (bob) waits for the row lock
+  P-->>S: alice: 1 row, commit
+  P-->>S: bob: 0 rows (re-checked after the lock), rollback
+  S-->>A: 201 HELD
+  S-->>B: 409 SEATS_UNAVAILABLE [B1]
+```

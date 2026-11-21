@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Health } from "./components/health.js";
+import { Lab } from "./components/lab/lab.js";
 import { ShowPage } from "./components/show-page.js";
 import { Shows } from "./components/shows.js";
 
 // Per tab, so two tabs can be two people racing for one seat.
 const SESSION_KEY = "tix.user";
 
-type Tab = "shows" | "status";
+type Tab = "shows" | "lab" | "status";
 const TABS: { id: Tab; label: string }[] = [
   { id: "shows", label: "Shows" },
+  { id: "lab", label: "Lab" },
   { id: "status", label: "Status" },
 ];
 
@@ -60,10 +62,11 @@ export function App() {
       <main className="mx-auto max-w-6xl p-6">
         {tab === "shows" &&
           (showId ? (
-            <ShowPage showId={showId} onBack={() => setShowId(null)} />
+            <ShowPage user={user} showId={showId} onBack={() => setShowId(null)} />
           ) : (
             <Shows onOpen={setShowId} />
           ))}
+        {tab === "lab" && <Lab />}
         {tab === "status" && <Health />}
       </main>
     </div>

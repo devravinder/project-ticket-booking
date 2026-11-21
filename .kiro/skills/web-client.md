@@ -7,14 +7,17 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 
 ## Structure
 
-| File                           | Role                                                         |
-| ------------------------------ | ------------------------------------------------------------ |
-| `src/api.ts`                   | Every REST call, through the Vite proxy `/api/<service>/...` |
-| `src/hooks.ts`                 | `usePoll` (with `refresh()`), money and time formatting      |
-| `src/components/health.tsx`    | Status tab: one card per service                             |
-| `src/components/shows.tsx`     | Show cards                                                   |
-| `src/components/show-page.tsx` | One show: seat map and (later) hold and checkout             |
-| `src/components/seat-map.tsx`  | Seat grid; colour from a `lookOf(seat)` callback             |
+| File                                    | Role                                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `src/api.ts`                            | Every REST call, through the Vite proxy `/api/<service>/...` |
+| `src/hooks.ts`                          | `usePoll` (with `refresh()`), money and time formatting      |
+| `src/components/health.tsx`             | Status tab: one card per service                             |
+| `src/components/shows.tsx`              | Show cards                                                   |
+| `src/components/show-page.tsx`          | One show: seat map and (later) hold and checkout             |
+| `src/components/seat-map.tsx`           | Seat grid; colour from a `lookOf(seat)` callback             |
+| `src/components/lab/lab.tsx`            | Lab tab: scenario cards and switches panels                  |
+| `src/components/lab/race.tsx`           | Same seat, same moment: N racers via `Promise.all`           |
+| `src/components/lab/switches-panel.tsx` | Edit any service's switches (choices for modes)              |
 
 ## Rules
 

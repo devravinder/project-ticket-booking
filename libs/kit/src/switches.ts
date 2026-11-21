@@ -6,13 +6,20 @@ export type SwitchDefaults = Record<string, SwitchValue>;
 
 export const SWITCH_DEFAULTS = Symbol("SWITCH_DEFAULTS");
 
+// Allowed values for string switches such as modes.
+export type SwitchChoices = Record<string, readonly string[]>;
+export const SWITCH_CHOICES = Symbol("SWITCH_CHOICES");
+
 // Runtime knobs for demos and tests (failure injection, modes). In memory: a restart resets them.
 @Injectable()
 export class Switches {
   private readonly logger = new Logger(Switches.name);
   private readonly values: Map<string, SwitchValue>;
 
-  constructor(@Inject(SWITCH_DEFAULTS) private readonly defaults: SwitchDefaults) {
+  constructor(
+    @Inject(SWITCH_DEFAULTS) private readonly defaults: SwitchDefaults,
+    @Inject(SWITCH_CHOICES) private readonly choices: SwitchChoices,
+  ) {
     this.values = new Map(Object.entries(defaults));
   }
 
@@ -31,6 +38,10 @@ export class Switches {
       if (!(name in this.defaults)) fail(400, "UNKNOWN_SWITCH", `unknown switch ${name}`);
       if (typeof value !== typeof this.defaults[name]) {
         fail(400, "INVALID_SWITCH", `${name} must be a ${typeof this.defaults[name]}`);
+      }
+      const allowed = this.choices[name];
+      if (allowed && !allowed.includes(value as string)) {
+        fail(400, "INVALID_SWITCH", `${name} must be one of ${allowed.join(", ")}`);
       }
     }
     for (const [name, value] of Object.entries(patch)) {

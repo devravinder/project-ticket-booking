@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Seat, ShowDetail, ShowSummary } from "@tix/contracts";
 import { Database, fail } from "@tix/kit";
+import { SEAT_COLUMNS, SEAT_IS_FREE } from "./seat-sql.js";
 
 const SUMMARY_SQL = `
   SELECT s.id, s.starts_at AS "startsAt",
@@ -8,7 +9,7 @@ const SUMMARY_SQL = `
          json_build_object('id', sc.id, 'name', sc.name) AS screen,
          LEAST(s.regular_cents, s.premium_cents) AS "priceFromCents",
          (SELECT count(*)::int FROM show_seats x WHERE x.show_id = s.id) AS "seatsTotal",
-         (SELECT count(*)::int FROM show_seats x WHERE x.show_id = s.id AND x.status = 'AVAILABLE')
+         (SELECT count(*)::int FROM show_seats x WHERE x.show_id = s.id AND ${SEAT_IS_FREE})
            AS "seatsAvailable"
   FROM shows s JOIN movies m ON m.id = s.movie_id JOIN screens sc ON sc.id = s.screen_id`;
 
@@ -34,7 +35,7 @@ export class ShowsRepository {
 
   async seats(showId: string, seatNos?: string[]): Promise<Seat[]> {
     const { rows } = await this.db.query<Seat>(
-      `SELECT seat_no AS "seatNo", row_label AS row, col, tier, price_cents AS "priceCents", status
+      `SELECT ${SEAT_COLUMNS}
        FROM show_seats WHERE show_id = $1 AND ($2::text[] IS NULL OR seat_no = ANY($2))
        ORDER BY row_label, col`,
       [showId, seatNos ?? null],

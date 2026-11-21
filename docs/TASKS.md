@@ -30,9 +30,21 @@
 
 ## 2. Seat holds
 
-- [ ] Hold several seats, all or nothing; 1-minute expiry; release
-- [ ] `holdMode` switch: `atomic`, `pessimistic`, `naive`
-- [ ] UI: select seats, hold, countdown; Lab: two users race for one seat
+- [x] Hold up to 6 seats, all or nothing (`POST /shows/:id/holds`, `X-User`); release
+      (`DELETE /holds/:id`); `GET /holds/:id`, `GET /holds?showId=` (my live holds)
+- [x] 1-minute expiry (`holdTtlMs`): an expired seat reads as free at once; a sweeper on each
+      instance marks holds `EXPIRED` (`FOR UPDATE SKIP LOCKED`)
+- [x] `holdMode` switch: `atomic` (conditional `UPDATE`), `pessimistic` (`FOR UPDATE`), `naive`
+      (read, pause, write); allowed values are checked
+- [x] UI: select seats, hold, countdown, release; Lab: "same seat, same moment" race with N
+      people, optionally split over both instances, and a switches panel per instance
+- [x] Verified: 41 API checks. One winner in 8 two-person races and 3 races of 25 people over two
+      instances (atomic and pessimistic); 40 overlapping 3-seat holds give no seat twice and no
+      deadlock; naive mode tells both people "201" and one hold silently loses its seat; expired
+      seats free at once, sweeping an old hold leaves the new holder's seat alone; 403 for another
+      user's hold; release is idempotent. 14 browser checks: two people press Hold on B1 together
+      and exactly one gets it, the other sees "Just taken"; colours for mine, held and free; Lab
+      verdicts for atomic (1 winner) and naive (5 told, 1 really)
 
 ## 3. Live seat map
 
