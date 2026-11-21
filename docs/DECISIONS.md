@@ -290,3 +290,36 @@ Rejected:
 - Asking the gateway about every pending booking at once on each tick: with a backoff per booking
   the load stays flat when the gateway is slow.
 - Manual refunds: a person must notice first, and the customer waits for their money.
+
+## ADR-012 - Waiting room in Redis, admission by token
+
+Date: 2026-11-21 - Status: Accepted
+
+When thousands open a hot show at once, the seat rows would see thousands of conflicting `UPDATE`s
+and almost everyone would get "seat taken". A waiting room lets people in at a rate the seat map can
+serve, first come, first served.
+
+- **The line** is a Redis sorted set per show, scored by join time: `ZADD NX` keeps your place when
+  you join again, `ZRANK` is your position.
+- **Admission** runs four times a second on every instance, but one Lua script makes it atomic and
+  once per second per show: `SET tick:<second> NX` (only the first instance wins that second),
+  `ZPOPMIN` N people, and for each one `SET admitted:<user> <token> PX <ttl>`. Two instances
+  therefore still let in N per second, not 2N (measured 2.0/s with N = 2).
+- **The token** is checked before a hold (`X-Queue-Token`). Only the holder's name and token match,
+  and it expires after `admissionTtlMs` (2 minutes).
+- **Fail closed:** if Redis is down while the room is on, joins and holds get 503. Letting everyone
+  in would bring back the stampede the room exists to prevent. With the room off, Redis is not used.
+- The seat rows stay in Postgres; the waiting room only decides _who may try_, the conditional
+  `UPDATE` (ADR-006) still decides _who gets the seat_.
+- `waitingRoom` is a switch per instance (in memory); the Lab sets both instances. A real system
+  would keep the flag in shared config.
+
+Rejected:
+
+- Rate limiting holds per second: the unlucky are rejected and retry, which is a stampede with
+  extra steps, and the order is random instead of first come, first served.
+- A queue table in Postgres: every position check would hit the database we are protecting.
+- Admitting from one elected leader instance: the `SET NX` per second gives the same "once" without
+  leader election.
+- Keys built inside the Lua script (`ARGV` prefix) are not Redis Cluster safe; acceptable on one
+  Redis node, and the hash tag `{show}` keeps a show's keys together if it is ever clustered.

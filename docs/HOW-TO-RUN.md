@@ -79,6 +79,8 @@ restarting a service resets them; each panel also has a Reset button.
   webhook lost and no return (reconciliation), webhook endpoint down (gateway retries).
 - **Consistency check:** invariants across seats, holds and bookings, refreshed every 2 s.
 - **Real crashes:** set `crashPoint` and restart the service yourself (see the Lab card).
+- **Flash crowd and waiting room:** N bots open a show at once; the Redis line lets in a few per
+  second and each bot holds a seat. Open the show yourself during the run to stand in line.
 - **Live seat map across instances:** LISTEN stats per instance and a button that drops the
   connection.
 - **Payment gateway log:** sessions, every webhook attempt, Redeliver.

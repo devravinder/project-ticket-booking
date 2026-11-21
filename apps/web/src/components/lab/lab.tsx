@@ -1,4 +1,5 @@
 import { CheckoutLab } from "./checkout-lab.js";
+import { FlashCrowd } from "./flash-crowd.js";
 import { GatewayLog } from "./gateway-log.js";
 import { CHECKOUT_SCENARIOS, FAILURE_SCENARIOS } from "./scenarios.js";
 import { Consistency, CrashHelp } from "./consistency.js";
@@ -13,6 +14,7 @@ export function Lab() {
         <RaceScenario />
         <CheckoutLab title="Checkout and payment" scenarios={CHECKOUT_SCENARIOS} />
         <CheckoutLab title="When things go wrong" scenarios={FAILURE_SCENARIOS} />
+        <FlashCrowd />
         <LiveScenario />
         <GatewayLog />
         <CrashHelp />

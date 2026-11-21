@@ -1,0 +1,50 @@
+@booking = http://localhost:7001
+@booking2 = http://localhost:7011
+
+### Turn the waiting room on (both instances), 2 people per second
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "waitingRoom": true, "admitPerSecond": 2 }
+
+###
+PUT {{booking2}}/admin/switches
+Content-Type: application/json
+
+{ "waitingRoom": true, "admitPerSecond": 2 }
+
+### Join the line (again keeps your place); ADMITTED comes with a token
+# @name ticket
+POST {{booking}}/shows/SHOW-1/queue
+X-User: alice
+
+### Where am I?
+GET {{booking}}/shows/SHOW-1/queue/me
+X-User: alice
+
+### Line stats for the show
+GET {{booking}}/shows/SHOW-1/queue
+
+### Hold without a token: 403 QUEUE_REQUIRED
+POST {{booking}}/shows/SHOW-1/holds
+Content-Type: application/json
+X-User: alice
+
+{ "seats": ["E1"] }
+
+### Hold with the token from the ADMITTED ticket
+POST {{booking}}/shows/SHOW-1/holds
+Content-Type: application/json
+X-User: alice
+X-Queue-Token: {{ticket.response.body.token}}
+
+{ "seats": ["E1"] }
+
+### Empty the line and forget admissions
+DELETE {{booking}}/admin/shows/SHOW-1/queue
+
+### Back to defaults (room off)
+PUT {{booking}}/admin/switches/reset
+
+###
+PUT {{booking2}}/admin/switches/reset

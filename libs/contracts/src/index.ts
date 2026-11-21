@@ -143,3 +143,23 @@ export type ConsistencyReport = {
   bookings: Record<string, number>;
   problems: { kind: string; severity: "error" | "warning"; detail: string }[];
 };
+
+// Proof of admission from the waiting room; needed to hold seats while it is on.
+export const QUEUE_TOKEN_HEADER = "x-queue-token";
+
+export type QueueTicket = {
+  // OPEN: no waiting room right now. NOT_IN_QUEUE: only from GET .../queue/me.
+  status: "OPEN" | "NOT_IN_QUEUE" | "WAITING" | "ADMITTED";
+  position?: number;
+  waiting: number;
+  etaSeconds?: number;
+  token?: string;
+  admittedUntil?: string;
+};
+
+export type QueueStats = {
+  enabled: boolean;
+  admitPerSecond: number;
+  waiting: number;
+  admittedTotal: number;
+};

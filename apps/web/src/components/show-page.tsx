@@ -4,12 +4,14 @@ import { api, ApiError, type ServiceName } from "../api.js";
 import { clock, errorText, money, useCountdown, usePoll } from "../hooks.js";
 import { type LiveState, useLiveShow } from "../live.js";
 import { SeatMap, type SeatLook } from "./seat-map.js";
+import { AdmittedBanner, useQueue, WaitingPanel } from "./waiting-room.js";
 
 type Props = { user: string; showId: string; onBack: () => void };
 
 export function ShowPage({ user, showId, onBack }: Props) {
   const [via, setVia] = useState<ServiceName>("booking");
   const live = useLiveShow(showId, via);
+  const queue = useQueue(user, showId);
   const holdsPoll = usePoll<Hold[]>(() => api.myHolds(user, showId), 2000, [user, showId]);
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
@@ -41,7 +43,7 @@ export function ShowPage({ user, showId, onBack }: Props) {
   const hold = async () => {
     setBusy(true);
     try {
-      const h = await api.hold(user, showId, selected);
+      const h = await api.hold(user, showId, selected, queue.token);
       setSelected([]);
       setMessage({
         tone: "info",
@@ -54,6 +56,8 @@ export function ShowPage({ user, showId, onBack }: Props) {
         text: taken ? `Just taken by someone else: ${taken.join(", ")}` : errorText(error),
       });
       if (taken) setSelected((s) => s.filter((x) => !taken.includes(x)));
+      // Our turn ended: back into the line.
+      if (error instanceof ApiError && error.code === "QUEUE_REQUIRED") queue.rejoin();
     } finally {
       setBusy(false);
       refresh();
@@ -63,6 +67,10 @@ export function ShowPage({ user, showId, onBack }: Props) {
   const selectedCents = show
     ? show.seats.filter((s) => selected.includes(s.seatNo)).reduce((t, s) => t + s.priceCents, 0)
     : 0;
+
+  if (queue.ticket?.status !== "OPEN" && queue.ticket?.status !== "ADMITTED") {
+    return <WaitingPanel ticket={queue.ticket} error={queue.error} />;
+  }
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_20rem]" aria-label={`Show page ${showId}`}>
@@ -77,6 +85,7 @@ export function ShowPage({ user, showId, onBack }: Props) {
             <p className="mb-6 text-sm text-gray-600">
               {show.screen.name} · {new Date(show.startsAt).toLocaleString()} · {show.id}
             </p>
+            {queue.ticket.admittedUntil && <AdmittedBanner until={queue.ticket.admittedUntil} />}
             <SeatMap show={show} lookOf={lookOf} onToggle={toggle} />
           </>
         )}

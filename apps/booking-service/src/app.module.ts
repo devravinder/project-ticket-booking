@@ -14,6 +14,8 @@ import { SeatEvents } from "./live/seat-events.js";
 import { GatewayClient } from "./payments/gateway.client.js";
 import { ShowsController } from "./shows/shows.controller.js";
 import { ShowsRepository } from "./shows/shows.repository.js";
+import { WaitingRoomController } from "./waiting-room/waiting-room.controller.js";
+import { WaitingRoom } from "./waiting-room/waiting-room.service.js";
 
 // Owns shows, seats, holds and bookings.
 @Module({
@@ -32,6 +34,11 @@ import { ShowsRepository } from "./shows/shows.repository.js";
         webhooksDown: false,
         // Exit the process at this point, like a crash (Lab; restart it yourself).
         crashPoint: "none",
+        // Hot-show mode: holds need an admission token from the Redis queue.
+        waitingRoom: false,
+        admitPerSecond: 2,
+        // How long an admitted person may keep picking seats.
+        admissionTtlMs: 120_000,
       },
       choices: { holdMode: HOLD_MODES, crashPoint: CRASH_POINTS },
     }),
@@ -42,6 +49,7 @@ import { ShowsRepository } from "./shows/shows.repository.js";
     LiveController,
     BookingsController,
     ConsistencyController,
+    WaitingRoomController,
   ],
   providers: [
     ShowsRepository,
@@ -51,6 +59,7 @@ import { ShowsRepository } from "./shows/shows.repository.js";
     GatewayClient,
     BookingsService,
     Recovery,
+    WaitingRoom,
   ],
 })
 export class AppModule {}

@@ -132,8 +132,21 @@
 
 ## 7. Waiting room
 
-- [ ] Redis queue per show; admit N users per second; holds need an admission token
-- [ ] UI: your place in line; Lab: flash crowd
+- [x] Redis line per show (`ZADD NX` sorted set by join time); `POST /shows/:id/queue` (join, keeps
+      your place), `GET /shows/:id/queue/me`, `GET /shows/:id/queue` (stats),
+      `DELETE /admin/shows/:id/queue`
+- [x] Admission by one Lua script per show per second: `SET tick NX` so only one instance admits,
+      `ZPOPMIN` N people, a token per person with a TTL (`admissionTtlMs`, 2 minutes)
+- [x] With `waitingRoom` on, `POST /shows/:id/holds` needs `X-Queue-Token` (403 `QUEUE_REQUIRED`);
+      Redis down while it is on: 503, never "let everyone in"
+- [x] UI: the show page shows your place in line, then a banner with the time left; Lab "Flash
+      crowd" card: N bots join at once, each holds a seat when let in, with live stats
+- [x] Verified: 20 API checks. 20 fans over two instances get positions in join order; joining again
+      keeps the place; no token or a wrong token is 403; 2 per second in total with two instances
+      (measured 2.0/s over 8 s); first in, first out; a token works only for its owner and expires;
+      Redis stopped: join and hold 503 with the room on, holds work with it off. 9 browser checks:
+      12 bots in line, bob arrives seventh, waits, is let in and holds a seat; all bots hold a seat;
+      clean-up releases them and turns the room off
 
 ## 8. Wrap-up
 

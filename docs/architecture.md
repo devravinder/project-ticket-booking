@@ -154,3 +154,26 @@ flowchart LR
   R[REFUND_PENDING] -->|refund job, key refund-id| G[gateway refund]
   G --> RF[REFUNDED]
 ```
+
+## Waiting room
+
+With the waiting room on, people queue in Redis and are let in a few per second; only an admission
+token lets them hold seats (ADR-012).
+
+```mermaid
+sequenceDiagram
+  participant U as customer
+  participant B as booking-service (any instance)
+  participant R as Redis
+  U->>B: POST /shows/SHOW-1/queue
+  B->>R: ZADD NX queue (join time)
+  B-->>U: WAITING, position 37
+  loop every 250 ms on every instance
+    B->>R: Lua: SET tick NX, ZPOPMIN 2, SET token PX
+  end
+  U->>B: GET /shows/SHOW-1/queue/me
+  B-->>U: ADMITTED + token
+  U->>B: POST holds with X-Queue-Token
+  B->>R: GET admitted token
+  B-->>U: 201 HELD
+```

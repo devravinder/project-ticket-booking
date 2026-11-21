@@ -22,6 +22,8 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 | `src/components/lab/checkout-lab.tsx`   | Runs a scenario, shows verdict and booking timeline          |
 | `src/components/lab/consistency.tsx`    | Consistency report card and crash instructions               |
 | `src/components/bookings.tsx`           | My bookings, booking detail with timeline                    |
+| `src/components/waiting-room.tsx`       | `useQueue`, place-in-line panel, admitted banner             |
+| `src/components/lab/flash-crowd.tsx`    | Bots join the line and hold a seat when admitted             |
 | `src/components/lab/switches-panel.tsx` | Edit any service's switches (choices for modes)              |
 
 ## Rules

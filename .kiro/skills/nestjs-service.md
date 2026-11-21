@@ -62,3 +62,10 @@ stopped and awaited in `onModuleDestroy`. Two instances may run the same job: cl
 - The `Observable` teardown removes the viewer: always clear its timers there.
 - The LISTEN connection is a plain `pg.Client`, not from the pool. `error` and `end` can both fire
   for one failure: reconnect once (a `gone` flag), and resync viewers after reconnecting.
+
+## Redis
+
+- `Redis.connected()` connects on first use; commands go through `sendCommand([...])` so they do not
+  depend on the client's helper signatures.
+- Several steps that must happen together (pop and grant a token) go in one Lua `EVAL`.
+- When Redis protects something (the waiting room), fail closed with a 503 when it is down.

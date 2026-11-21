@@ -6,6 +6,9 @@ import {
   type Health,
   type Hold,
   type LiveStats,
+  QUEUE_TOKEN_HEADER,
+  type QueueStats,
+  type QueueTicket,
   type ShowDetail,
   type ShowSummary,
   USER_HEADER,
@@ -57,15 +60,31 @@ export const api = {
   },
   shows: () => request<ShowSummary[]>("booking", "/shows"),
   show: (id: string) => request<ShowDetail>("booking", `/shows/${id}`),
-  hold: (user: string, showId: string, seats: string[]) =>
-    api.holdVia("booking", user, showId, seats),
+  hold: (user: string, showId: string, seats: string[], queueToken?: string) =>
+    api.holdVia("booking", user, showId, seats, queueToken),
   // The Lab sends some racers to the second instance.
-  holdVia: (service: ServiceName, user: string, showId: string, seats: string[]) =>
+  holdVia: (
+    service: ServiceName,
+    user: string,
+    showId: string,
+    seats: string[],
+    queueToken?: string,
+  ) =>
     request<Hold>(service, `/shows/${showId}/holds`, {
       method: "POST",
-      headers: as(user),
+      headers: { ...as(user), ...(queueToken ? { [QUEUE_TOKEN_HEADER]: queueToken } : {}) },
       body: json({ seats }),
     }),
+  joinQueue: (user: string, showId: string) =>
+    request<QueueTicket>("booking", `/shows/${showId}/queue`, {
+      method: "POST",
+      headers: as(user),
+    }),
+  queueMe: (user: string, showId: string) =>
+    request<QueueTicket>("booking", `/shows/${showId}/queue/me`, { headers: as(user) }),
+  queueStats: (showId: string) => request<QueueStats>("booking", `/shows/${showId}/queue`),
+  resetQueue: (showId: string) =>
+    request<unknown>("booking", `/admin/shows/${showId}/queue`, { method: "DELETE" }),
   myHolds: (user: string, showId: string) =>
     request<Hold[]>("booking", `/holds?showId=${encodeURIComponent(showId)}`, {
       headers: as(user),
