@@ -15,6 +15,7 @@ import {
   parse,
   SERVICE_CONFIG,
   SIGNATURE_HEADER,
+  Switches,
   USER_HEADER,
   userSchema,
   verifyWebhook,
@@ -41,6 +42,7 @@ export class BookingsController {
   constructor(
     @Inject(SERVICE_CONFIG) private readonly config: BookingConfig,
     @Inject(BookingsService) private readonly bookings: BookingsService,
+    @Inject(Switches) private readonly switches: Switches,
   ) {}
 
   @Post("holds/:id/checkout")
@@ -70,6 +72,9 @@ export class BookingsController {
   @Post("webhooks/gateway")
   @HttpCode(200)
   webhook(@Req() req: RawBodyRequest<Request>, @Headers(SIGNATURE_HEADER) signature?: string) {
+    // Lab: look down to the gateway, which keeps retrying.
+    if (this.switches.get<boolean>("webhooksDown"))
+      fail(503, "UNAVAILABLE", "webhooks are down (Lab switch)");
     const raw = req.rawBody?.toString("utf8") ?? "";
     const check = verifyWebhook(this.config.WEBHOOK_SECRET, raw, signature);
     if (!check.ok) fail(401, "INVALID_SIGNATURE", check.reason);

@@ -13,7 +13,7 @@ import { SeatEvents } from "../live/seat-events.js";
 import { GatewayClient, gatewayFailed } from "../payments/gateway.client.js";
 import { SEAT_IS_FREE } from "../shows/seat-sql.js";
 
-export type Source = "webhook" | "return" | "reconcile";
+export type Source = "webhook" | "return" | "reconcile" | "refund job";
 
 type Row = {
   id: string;
@@ -135,6 +135,7 @@ export class BookingsService {
       await this.db.tx((c) => log(c, id, "could not reach the gateway", (error as Error).message));
       gatewayFailed(error);
     }
+    this.crashIf("afterSession");
     await this.db.tx(async (c) => {
       const r = await c.query(
         "UPDATE bookings SET session_id = $2, pay_url = $3, updated_at = now() WHERE id = $1 AND session_id IS NULL",
@@ -144,8 +145,16 @@ export class BookingsService {
     });
   }
 
+  // Lab: die like a real crash (no shutdown hooks); a supervisor or you restart the process.
+  crashIf(point: "afterSession" | "beforeConfirm"): void {
+    if (this.switches.get<string>("crashPoint") !== point) return;
+    this.logger.error(`crashPoint ${point}: exiting now`);
+    process.exit(1);
+  }
+
   // Webhooks: verified by the controller; the inbox row commits with the effect.
   async onWebhook(event: WebhookEvent): Promise<{ result: string }> {
+    this.crashIf("beforeConfirm");
     const result = await this.db.tx(async (c) => {
       const fresh = await c.query(
         "INSERT INTO webhook_inbox (event_id, type, session_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
@@ -208,6 +217,12 @@ export class BookingsService {
       // The session was created but we crashed before storing its id.
       await c.query("UPDATE bookings SET session_id = $2 WHERE id = $1", [b.id, sessionId]);
     }
+    if (status !== "OPEN" && status !== "PROCESSING") {
+      // A final answer: reconciliation need not ask about this booking again.
+      await c.query("UPDATE bookings SET settled_at = COALESCE(settled_at, now()) WHERE id = $1", [
+        b.id,
+      ]);
+    }
     if (status === "PAID") return this.confirm(c, b, source);
     if (status === "DECLINED") return this.declined(c, b, source);
     if (status === "EXPIRED") return this.unpaid(c, b, source);
@@ -251,7 +266,7 @@ export class BookingsService {
     const taken = b.seat_nos.filter((s) => !got.has(s));
     await this.holds.freeHold(c, b.hold_id, "EXPIRED");
     await c.query(
-      `UPDATE bookings SET status = 'REFUND_PENDING', updated_at = now(),
+      `UPDATE bookings SET status = 'REFUND_PENDING', updated_at = now(), next_check_at = now(),
               failure_reason = $2 WHERE id = $1`,
       [b.id, `paid after the hold ended; ${taken.join(", ")} went to someone else`],
     );

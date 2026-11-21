@@ -75,6 +75,10 @@ restarting a service resets them; each panel also has a Reset button.
 - **Checkout and payment:** pay and confirm, card declined, duplicate webhooks, lost webhook
   recovered by the return, webhook and returns racing, customer walks away. Each run shows a
   verdict and the booking's timeline.
+- **When things go wrong:** paid late with the seat still free (booked) or resold (refunded),
+  webhook lost and no return (reconciliation), webhook endpoint down (gateway retries).
+- **Consistency check:** invariants across seats, holds and bookings, refreshed every 2 s.
+- **Real crashes:** set `crashPoint` and restart the service yourself (see the Lab card).
 - **Live seat map across instances:** LISTEN stats per instance and a button that drops the
   connection.
 - **Payment gateway log:** sessions, every webhook attempt, Redeliver.

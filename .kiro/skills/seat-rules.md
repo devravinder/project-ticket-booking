@@ -28,6 +28,14 @@ description: Rules for any code that changes a seat, hold or booking in the book
 - Write a `booking_log` entry with every change; the timeline is how a person debugs it.
 - No HTTP call inside a transaction. Commit, call the gateway, then record in a new transaction.
 
+## Recovery jobs
+
+- Jobs claim bookings with one `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED)` that
+  also pushes `next_check_at` back, then call the gateway outside the transaction.
+- A provider that is not listed in `AppModule.providers` never runs, and nothing complains:
+  check a new job's log line after adding it.
+- After changing seats, holds or bookings, `GET /admin/consistency` must still say `ok`.
+
 ## Freeing seats
 
 - Free only seats that still point at your hold (`WHERE hold_id = $1 AND status = 'HELD'`). After

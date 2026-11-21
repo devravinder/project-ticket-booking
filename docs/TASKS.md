@@ -109,9 +109,26 @@
 
 ## 6. Failure lab
 
-- [ ] Crash before confirm; reconciliation asks the gateway about stuck bookings
-- [ ] Late payment after the seat was resold: automatic refund
-- [ ] Consistency report: booked seats against confirmed bookings
+- [x] Reconciliation job (each instance, every second): bookings still waiting for news after
+      `reconcileAfterMs` (15 s) are claimed with `FOR UPDATE SKIP LOCKED` and a backoff (2 to 30 s),
+      the gateway is asked, the answer goes through `settle`; a final answer sets `settled_at`
+- [x] A session created at the gateway but never stored is found by `merchantRef` (the booking id)
+- [x] Refund job: `REFUND_PENDING` bookings are refunded with the key `refund-<id>` until the gateway
+      says `REFUNDED`
+- [x] Switches: `crashPoint` (`afterSession`, `beforeConfirm`: a real `process.exit`),
+      `webhooksDown` (503), `reconcileAfterMs`
+- [x] `GET /admin/consistency`: seat booked without a confirmed booking, confirmed booking missing
+      a seat, seat sold twice (errors); naive double holds, refunds owed, stuck checkouts (warnings)
+- [x] Lab: "When things go wrong" card (paid late with the seat free or resold, lost webhook and no
+      return, webhook endpoint down), consistency card, crash instructions, `crashPoint` select
+- [x] Verified: 27 API checks. Lost webhook and no return: reconciliation confirms, once across two
+      instances; 503 for a while: the gateway retries and the next attempt confirms; crash before
+      confirm: nothing committed, after a restart it is confirmed; crash after the session was
+      created: retrying checkout reuses that one session, and with no retry reconciliation finds it
+      by `merchantRef`; paid late with the seat free: `CONFIRMED`; paid late after a rival took the
+      seat: `REFUNDED`, the rival keeps it; a corrupted seat is reported and the report clears after
+      the repair; a naive double hold is a warning. 11 browser checks: the four Lab scenarios pass
+      with the expected timeline entries, consistency stays OK
 
 ## 7. Waiting room
 

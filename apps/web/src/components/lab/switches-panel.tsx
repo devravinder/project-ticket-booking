@@ -1,10 +1,13 @@
-import { HOLD_MODES } from "@tix/contracts";
+import { CRASH_POINTS, HOLD_MODES } from "@tix/contracts";
 import { useState } from "react";
 import { api, type ServiceName, type Switches } from "../../api.js";
 import { errorText, usePoll } from "../../hooks.js";
 
 // Mirrors the services' allowed values; the service rejects anything else anyway.
-const CHOICES: Record<string, readonly string[]> = { holdMode: HOLD_MODES };
+const CHOICES: Record<string, readonly string[]> = {
+  holdMode: HOLD_MODES,
+  crashPoint: CRASH_POINTS,
+};
 
 export function SwitchesPanel({ service, title }: { service: ServiceName; title: string }) {
   const { data, error, refresh } = usePoll<Switches>(() => api.switches(service), 1000, [service]);

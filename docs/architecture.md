@@ -140,3 +140,17 @@ sequenceDiagram
     B->>B: settle: already handled
   end
 ```
+
+## Recovery
+
+Background jobs on every instance close the gaps that webhooks and returns leave (ADR-011).
+
+```mermaid
+flowchart LR
+  P[PENDING_PAYMENT or EXPIRED<br/>older than 15 s] -->|reconciliation asks GET /sessions/:id| S{session}
+  S -->|PAID| C[settle: book or REFUND_PENDING]
+  S -->|DECLINED or EXPIRED| F[settle: seats released]
+  S -->|OPEN| W[ask again later, backoff]
+  R[REFUND_PENDING] -->|refund job, key refund-id| G[gateway refund]
+  G --> RF[REFUNDED]
+```

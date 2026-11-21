@@ -133,3 +133,13 @@ export type Booking = {
   createdAt: string;
   log: BookingLogEntry[];
 };
+
+export const CRASH_POINTS = ["none", "afterSession", "beforeConfirm"] as const;
+
+export type ConsistencyReport = {
+  // False when any error-level invariant is broken.
+  ok: boolean;
+  checkedAt: string;
+  bookings: Record<string, number>;
+  problems: { kind: string; severity: "error" | "warning"; detail: string }[];
+};

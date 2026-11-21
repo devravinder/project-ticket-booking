@@ -31,6 +31,11 @@ export class GatewayClient {
     return this.call("GET", `/sessions/${encodeURIComponent(id)}`);
   }
 
+  // Finds a session we created but never stored, by our own booking id.
+  findByRef(merchantRef: string): Promise<GatewaySession[]> {
+    return this.call("GET", `/admin/sessions?merchantRef=${encodeURIComponent(merchantRef)}`);
+  }
+
   refund(id: string, key: string): Promise<GatewaySession> {
     return this.call("POST", `/sessions/${encodeURIComponent(id)}/refund`, key);
   }

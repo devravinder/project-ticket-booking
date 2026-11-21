@@ -1,0 +1,56 @@
+@booking = http://localhost:7001
+@gateway = http://localhost:7002
+
+### Consistency report: errors break ok; warnings do not
+GET {{booking}}/admin/consistency
+
+### Lost webhook and no return: reconciliation asks the gateway after 3 s instead of 15 s
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "reconcileAfterMs": 3000 }
+
+###
+PUT {{gateway}}/admin/switches
+Content-Type: application/json
+
+{ "dropWebhooks": true }
+
+### Late payment: 8 s hold, payment session closes at 6 s, the bank answers after 10 s
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "holdTtlMs": 8000, "paymentMarginMs": 2000 }
+
+###
+PUT {{gateway}}/admin/switches
+Content-Type: application/json
+
+{ "slowPayMs": 10000 }
+
+### Our webhook endpoint answers 503 (the gateway retries with backoff)
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "webhooksDown": true }
+
+### Real crash when the next webhook arrives (restart with pnpm start:booking)
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "crashPoint": "beforeConfirm" }
+
+### Real crash after the gateway created a session, before we store its id
+PUT {{booking}}/admin/switches
+Content-Type: application/json
+
+{ "crashPoint": "afterSession" }
+
+### Find a session by our booking id (what reconciliation does when we lost the id)
+GET {{gateway}}/admin/sessions?merchantRef=<booking-id>
+
+### Back to defaults
+PUT {{booking}}/admin/switches/reset
+
+###
+PUT {{gateway}}/admin/switches/reset

@@ -1,5 +1,6 @@
 import {
   type Booking,
+  type ConsistencyReport,
   type GatewaySession,
   type GatewaySessionDetail,
   type Health,
@@ -70,6 +71,7 @@ export const api = {
       headers: as(user),
     }),
   getHold: (id: string) => request<Hold>("booking", `/holds/${id}`),
+  consistency: () => request<ConsistencyReport>("booking", "/admin/consistency"),
   liveStats: (service: ServiceName) => request<LiveStats>(service, "/admin/live"),
   gatewaySessions: () => request<GatewaySession[]>("gateway", "/admin/sessions"),
   gatewaySession: (id: string) => request<GatewaySessionDetail>("gateway", `/admin/sessions/${id}`),

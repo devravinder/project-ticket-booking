@@ -252,3 +252,41 @@ Rejected:
 - A "processed" flag on the booking instead of an inbox: it cannot tell a duplicate of event A
   from a new event B about the same booking (for example `refund.succeeded` after
   `payment.succeeded`).
+
+## ADR-011 - Recovery: reconcile with the gateway, refund what is owed
+
+Date: 2026-11-21 - Status: Accepted
+
+Webhooks and returns are fast but can both fail: the webhook is lost, our endpoint is down, the
+process crashes, the customer closes the tab. Two background jobs on every instance make sure every
+booking still ends in a final state:
+
+- **Reconciliation.** Bookings that are `PENDING_PAYMENT` or `EXPIRED` and older than
+  `reconcileAfterMs` (15 s, so webhooks usually win) are claimed with `FOR UPDATE SKIP LOCKED`.
+  The claim also pushes `next_check_at` back (2, 4, 8, 16, then every 30 s), so two instances never
+  ask about the same booking at once and a slow gateway is not hammered. The job asks
+  `GET /sessions/:id`; the answer goes through the same `settle` as webhooks (ADR-010). When the
+  answer is final (`PAID`, `DECLINED`, `EXPIRED`, `REFUNDED`), `settled_at` stops further checks.
+- **Lost session ids.** If we crashed after the gateway created a session and before we stored its
+  id, the booking has no `session_id`. Reconciliation looks the session up by `merchantRef`, which
+  is the booking id. Retrying checkout also works: the idempotency key returns the same session.
+- **Refunds.** A booking paid after its seats went to someone else is `REFUND_PENDING`. The refund job
+  calls `POST /sessions/:id/refund` with the key `refund-<booking id>`, so retries refund once, and
+  `settle` records `REFUNDED`. Refunding is automatic: the customer did nothing wrong.
+
+**Crash points** (`crashPoint`) call `process.exit(1)` at the two moments that matter: after the
+gateway created a session, and when a webhook arrives before it is applied. Nothing half-done is
+committed, because each step is one transaction. **`webhooksDown`** answers 503, which the gateway
+retries.
+
+**Consistency report.** `GET /admin/consistency` runs invariant queries: no seat `BOOKED` without a
+`CONFIRMED` booking, no confirmed booking missing a seat, no seat in two confirmed bookings. Warnings
+list naive double holds, refunds still owed and checkouts waiting over a minute.
+
+Rejected:
+
+- Expiring the booking as "failed" when no webhook comes: the customer may have paid; only the
+  gateway knows.
+- Asking the gateway about every pending booking at once on each tick: with a backoff per booking
+  the load stays flat when the gateway is slow.
+- Manual refunds: a person must notice first, and the customer waits for their money.

@@ -105,3 +105,79 @@ export const CHECKOUT_SCENARIOS: Scenario[] = [
     },
   },
 ];
+
+// The slow bank answers after the 8 s hold ended; the payment session closed at 6 s.
+const LATE = {
+  booking: { holdTtlMs: 8000, paymentMarginMs: 2000 },
+  gateway: { slowPayMs: 10_000 },
+};
+
+export const FAILURE_SCENARIOS: Scenario[] = [
+  {
+    id: "late-free",
+    title: "Paid late, seat still free",
+    explain:
+      "The customer presses Pay in time but the bank answers after the hold ended. Nobody took the seat, so it is booked anyway.",
+    expect: "CONFIRMED",
+    ...LATE,
+    run: async (x) => {
+      const b = await x.checkout(await x.hold());
+      const paying = x.pay(b);
+      await x.waitFor(b, (n) => n.status === "EXPIRED", 12_000);
+      x.step("the hold ended while the bank was still thinking");
+      await paying;
+      return x.waitFor(b, (n) => n.status !== "EXPIRED", 8000);
+    },
+  },
+  {
+    id: "late-taken",
+    title: "Paid late, seat resold",
+    explain:
+      "Same slow bank, but a rival grabs the seat the moment the hold ends. The money goes back automatically.",
+    expect: "REFUNDED",
+    ...LATE,
+    run: async (x) => {
+      const h = await x.hold();
+      const b = await x.checkout(h);
+      const paying = x.pay(b);
+      await x.waitFor(b, (n) => n.status === "EXPIRED", 12_000);
+      const rival = await api.hold("lab-rival", x.showId, h.seats);
+      x.step(`lab-rival takes ${rival.seats.join(", ")} right after the hold ended`);
+      await paying;
+      const done = await x.waitFor(b, (n) => n.status === "REFUNDED", 15_000);
+      await api.release("lab-rival", rival.id).catch(() => undefined);
+      return done;
+    },
+  },
+  {
+    id: "reconcile",
+    title: "Paid, but we never heard",
+    explain:
+      "The webhook is lost and the customer closes the tab. After 3 s reconciliation asks the gateway and books the seat.",
+    expect: "CONFIRMED",
+    booking: { reconcileAfterMs: 3000 },
+    gateway: { dropWebhooks: true },
+    run: async (x) => {
+      const b = await x.checkout(await x.hold());
+      await x.pay(b);
+      x.step("no webhook, no return; waiting for reconciliation…");
+      return x.waitFor(b, (n) => n.status !== "PENDING_PAYMENT", 15_000);
+    },
+  },
+  {
+    id: "down",
+    title: "Our webhook endpoint is down",
+    explain:
+      "Webhooks get 503 for 4 s. The gateway retries with backoff; once we are back, the next attempt confirms.",
+    expect: "CONFIRMED",
+    booking: { webhooksDown: true },
+    run: async (x) => {
+      const b = await x.checkout(await x.hold());
+      await x.pay(b);
+      await x.sleep(4000);
+      await api.setSwitches("booking", { webhooksDown: false });
+      x.step("webhook endpoint is back up");
+      return x.waitFor(b, (n) => n.status !== "PENDING_PAYMENT", 15_000);
+    },
+  },
+];

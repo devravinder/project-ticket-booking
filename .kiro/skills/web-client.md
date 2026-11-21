@@ -20,6 +20,7 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 | `src/components/lab/race.tsx`           | Same seat, same moment: N racers via `Promise.all`           |
 | `src/components/lab/scenarios.ts`       | Payment scenarios: switches, steps, expected status          |
 | `src/components/lab/checkout-lab.tsx`   | Runs a scenario, shows verdict and booking timeline          |
+| `src/components/lab/consistency.tsx`    | Consistency report card and crash instructions               |
 | `src/components/bookings.tsx`           | My bookings, booking detail with timeline                    |
 | `src/components/lab/switches-panel.tsx` | Edit any service's switches (choices for modes)              |
 
