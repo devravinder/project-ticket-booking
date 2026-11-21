@@ -52,3 +52,13 @@ failure into 400 `INVALID_REQUEST`.
 `setInterval` started in `onApplicationBootstrap`, one run at a time (`this.running ??= ...`),
 stopped and awaited in `onModuleDestroy`. Two instances may run the same job: claim rows with
 `FOR UPDATE SKIP LOCKED`.
+
+## Live updates (SSE)
+
+- Announce a seat change with `SeatEvents.publish(c, changes)` inside the same transaction as the
+  change; it calls `pg_notify`, which Postgres delivers only on commit.
+- `@Sse()` handlers are `async` and validate before returning the `Observable`, so an unknown show
+  is a normal 404 instead of an error event on an open stream.
+- The `Observable` teardown removes the viewer: always clear its timers there.
+- The LISTEN connection is a plain `pg.Client`, not from the pool. `error` and `end` can both fire
+  for one failure: reconnect once (a `gone` flag), and resync viewers after reconnecting.

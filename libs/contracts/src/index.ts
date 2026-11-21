@@ -63,3 +63,11 @@ export type Hold = {
 };
 
 export type SeatsUnavailable = ApiErrorBody & { code: "SEATS_UNAVAILABLE"; unavailable: string[] };
+
+export type LiveStats = {
+  service: string;
+  listening: boolean;
+  received: number;
+  reconnects: number;
+  viewers: Record<string, number>;
+};

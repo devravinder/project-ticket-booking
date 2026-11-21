@@ -72,3 +72,25 @@ sequenceDiagram
   S-->>A: 201 HELD
   S-->>B: 409 SEATS_UNAVAILABLE [B1]
 ```
+
+## Live seat map
+
+Every seat change is announced with `pg_notify` inside its own transaction; each booking instance
+listens and streams the changed seats to its viewers over SSE (ADR-008).
+
+```mermaid
+sequenceDiagram
+  participant A as alice (via :7001)
+  participant S1 as booking :7001
+  participant P as Postgres
+  participant S2 as booking :7011
+  participant B as bob (via :7011)
+  B->>S2: GET /shows/SHOW-3/events
+  S2-->>B: snapshot
+  A->>S1: hold C4
+  S1->>P: UPDATE seat + pg_notify, COMMIT
+  P-->>S1: NOTIFY seat_changes C4
+  P-->>S2: NOTIFY seat_changes C4
+  S2->>P: read seat C4
+  S2-->>B: seats C4 HELD
+```

@@ -1,6 +1,7 @@
 import {
   type Health,
   type Hold,
+  type LiveStats,
   type ShowDetail,
   type ShowSummary,
   USER_HEADER,
@@ -66,6 +67,9 @@ export const api = {
       headers: as(user),
     }),
   getHold: (id: string) => request<Hold>("booking", `/holds/${id}`),
+  liveStats: (service: ServiceName) => request<LiveStats>(service, "/admin/live"),
+  dropLive: (service: ServiceName) =>
+    request<{ dropped: boolean }>(service, "/admin/live/drop-connection", { method: "POST" }),
   release: (user: string, holdId: string) =>
     request<Hold>("booking", `/holds/${holdId}`, { method: "DELETE", headers: as(user) }),
   switches: (service: ServiceName) => request<Switches>(service, "/admin/switches"),

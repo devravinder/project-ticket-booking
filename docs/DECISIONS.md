@@ -132,3 +132,36 @@ Rejected:
   would depend on a background job running.
 - Redis keys with a TTL as the hold: an expired key vanishes without anyone telling the seat map,
   and the booking would need both stores to agree.
+
+## ADR-008 - Live seat map: SSE out, Postgres LISTEN/NOTIFY between instances
+
+Date: 2026-11-21 - Status: Accepted
+
+**Browser:** `GET /shows/:id/events` is a Server-Sent Events stream. The first event is a full
+`snapshot`; after that, `seats` events carry only the seats that changed. The browser's
+`EventSource` reconnects by itself, and every new connection starts with a snapshot, so a viewer
+never has to replay missed events (no `Last-Event-ID` bookkeeping).
+
+**Between instances:** a hold made on :7001 must reach someone watching through :7011. Every
+transaction that changes a seat calls `pg_notify('seat_changes', {showId, seats})`. Postgres
+delivers a notification only when that transaction commits, so a hold that is rolled back (409) is
+never announced, and the announcement can never get ahead of the data. Each instance keeps one
+dedicated connection with `LISTEN seat_changes`, reads the changed seats once per notification and
+pushes them to its own viewers.
+
+- Notifications sent while an instance is not listening are lost. After a reconnect the instance
+  sends every open map a fresh snapshot (verified with `pg_terminate_backend`).
+- A seat whose hold expires changes state without a write. It is announced when the sweeper
+  (ADR-007) writes, up to a second later.
+- The seat map is the only live view; show lists and the Lab still poll.
+
+Rejected:
+
+- WebSocket: two-way, needs its own upgrade path through the proxy, and the browser sends nothing
+  on this channel.
+- Polling the seat map every second: 30 viewers make 30 queries a second for a map that rarely
+  changes, and changes still show up late.
+- Redis pub/sub or Kafka between instances: one more system to keep in step with the database;
+  `NOTIFY` is transactional with the seat change for free.
+- Sending the change from application code after `COMMIT`: a crash between the two loses the
+  event, and a send before `COMMIT` can announce a change that is then rolled back.

@@ -1,25 +1,25 @@
-import { type Hold, MAX_SEATS_PER_HOLD, type Seat, type ShowDetail } from "@tix/contracts";
+import { type Hold, MAX_SEATS_PER_HOLD, type Seat } from "@tix/contracts";
 import { useState } from "react";
-import { api, ApiError } from "../api.js";
+import { api, ApiError, type ServiceName } from "../api.js";
 import { clock, errorText, money, useCountdown, usePoll } from "../hooks.js";
+import { type LiveState, useLiveShow } from "../live.js";
 import { SeatMap, type SeatLook } from "./seat-map.js";
 
 type Props = { user: string; showId: string; onBack: () => void };
 
 export function ShowPage({ user, showId, onBack }: Props) {
-  const showPoll = usePoll<ShowDetail>(() => api.show(showId), 2000, [showId]);
+  const [via, setVia] = useState<ServiceName>("booking");
+  const live = useLiveShow(showId, via);
   const holdsPoll = usePoll<Hold[]>(() => api.myHolds(user, showId), 2000, [user, showId]);
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const show = showPoll.data;
+  const show = live.show;
   const myHolds = holdsPoll.data ?? [];
   const mine = new Set(myHolds.map((h) => h.id));
 
-  const refresh = () => {
-    showPoll.refresh();
-    holdsPoll.refresh();
-  };
+  // The map updates itself; only my hold list is fetched again.
+  const refresh = () => holdsPoll.refresh();
 
   const lookOf = (seat: Seat): SeatLook => {
     if (seat.status === "BOOKED") return "booked";
@@ -70,7 +70,7 @@ export function ShowPage({ user, showId, onBack }: Props) {
         <button className="text-sm text-rose-700 underline" onClick={onBack}>
           ← All shows
         </button>
-        {showPoll.error && <p className="mt-2 text-red-700">{showPoll.error}</p>}
+        <LiveBadge state={live.state} via={via} onVia={setVia} updates={live.updates} />
         {show && (
           <>
             <h2 className="mt-2 text-xl font-semibold">{show.movie.title}</h2>
@@ -144,5 +144,42 @@ function HoldCard({ user, hold, onChange }: { user: string; hold: Hold; onChange
       </button>
       {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
     </div>
+  );
+}
+
+const STATE_STYLE: Record<LiveState, string> = {
+  connecting: "bg-gray-100 text-gray-700",
+  live: "bg-green-100 text-green-900",
+  reconnecting: "bg-amber-100 text-amber-900",
+};
+
+type BadgeProps = {
+  state: LiveState;
+  via: ServiceName;
+  onVia: (via: ServiceName) => void;
+  updates: number;
+};
+
+function LiveBadge({ state, via, onVia, updates }: BadgeProps) {
+  return (
+    <p className="float-right flex items-center gap-2 text-xs">
+      <span
+        className={`rounded px-2 py-0.5 font-semibold ${STATE_STYLE[state]}`}
+        aria-label="Live state"
+        data-state={state}
+      >
+        ● {state}
+      </span>
+      <span aria-label="Live updates">{updates} updates</span>
+      <select
+        aria-label="Live via"
+        className="rounded border px-1"
+        value={via}
+        onChange={(e) => onVia(e.target.value as ServiceName)}
+      >
+        <option value="booking">via instance :7001</option>
+        <option value="booking-2">via instance :7011</option>
+      </select>
+    </p>
   );
 }

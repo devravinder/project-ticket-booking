@@ -32,7 +32,8 @@ pnpm start:web         # http://localhost:5210
 ```
 
 Each service can also run on its own: `pnpm start:booking`, `pnpm start:gateway`. A second booking
-instance on :7011 (same database) is `pnpm start:booking:2`.
+instance on :7011 (same database) is `pnpm start:booking:2`. To see the live map cross instances,
+open a show in two tabs and pick "via instance :7011" in one of them.
 
 ## Ports
 

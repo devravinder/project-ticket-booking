@@ -11,6 +11,7 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 | --------------------------------------- | ------------------------------------------------------------ |
 | `src/api.ts`                            | Every REST call, through the Vite proxy `/api/<service>/...` |
 | `src/hooks.ts`                          | `usePoll` (with `refresh()`), money and time formatting      |
+| `src/live.ts`                           | `useLiveShow`: EventSource, snapshot then changed seats      |
 | `src/components/health.tsx`             | Status tab: one card per service                             |
 | `src/components/shows.tsx`              | Show cards                                                   |
 | `src/components/show-page.tsx`          | One show: seat map and (later) hold and checkout             |
@@ -22,6 +23,7 @@ description: Structure and rules of apps/web (React + Vite + Tailwind). Use when
 ## Rules
 
 - Types come from `@tix/contracts`; never copy them.
+- The seat map is live (`useLiveShow`); do not add polling for it. Lists and the Lab poll.
 - The proxy keys end in `/` (`/api/booking/`), otherwise `/api/booking` also matches `/api/booking-2`.
 - Every promise started from a click handles its own error; the UI test fails on any `pageerror`.
 - Keep accessible names stable (`aria-label`, button text, `data-status`): the browser test finds

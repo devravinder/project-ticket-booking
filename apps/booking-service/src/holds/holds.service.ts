@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Hold, HoldMode } from "@tix/contracts";
 import { Database, fail, sleep, Switches, type Tx } from "@tix/kit";
+import { SeatEvents } from "../live/seat-events.js";
 import { SEAT_IS_FREE } from "../shows/seat-sql.js";
 
 class SeatsTaken extends Error {
@@ -26,6 +27,7 @@ export class HoldsService {
   constructor(
     @Inject(Database) private readonly db: Database,
     @Inject(Switches) private readonly switches: Switches,
+    @Inject(SeatEvents) private readonly events: SeatEvents,
   ) {}
 
   // All or nothing: either every requested seat is now this user's, or none is (ADR-006).
@@ -56,6 +58,10 @@ export class HoldsService {
         if (got.length < seatNos.length) {
           throw new SeatsTaken(seatNos.filter((s) => !got.includes(s)));
         }
+        await this.events.publish(
+          c,
+          got.map((seatNo) => ({ showId, seatNo })),
+        );
         return this.view(c, hold.id);
       });
     } catch (error) {
@@ -127,11 +133,12 @@ export class HoldsService {
 
   // A seat already taken by a newer hold keeps that hold: only our own pointer is cleared.
   private async freeSeats(c: Tx, holdIds: string[]): Promise<void> {
-    await c.query(
+    const { rows } = await c.query<{ showId: string; seatNo: string }>(
       `UPDATE show_seats SET status = 'AVAILABLE', hold_id = NULL, hold_expires_at = NULL, updated_at = now()
-       WHERE hold_id = ANY($1) AND status = 'HELD'`,
+       WHERE hold_id = ANY($1) AND status = 'HELD' RETURNING show_id AS "showId", seat_no AS "seatNo"`,
       [holdIds],
     );
+    await this.events.publish(c, rows);
   }
 
   // The statement that decides who gets a seat; returns the seats this hold now has.

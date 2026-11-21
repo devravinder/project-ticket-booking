@@ -1,0 +1,23 @@
+@booking = http://localhost:7001
+@booking2 = http://localhost:7011
+
+### Live seat map (SSE). REST clients show it until you cancel; curl: curl -N <url>
+GET {{booking}}/shows/SHOW-3/events
+Accept: text/event-stream
+
+### The same stream from the second instance
+GET {{booking2}}/shows/SHOW-3/events
+Accept: text/event-stream
+
+### Now hold a seat on instance 1 and watch both streams get a "seats" event
+POST {{booking}}/shows/SHOW-3/holds
+Content-Type: application/json
+X-User: alice
+
+{ "seats": ["C4"] }
+
+### Listener stats: LISTEN state, notifications received, reconnects, open maps per show
+GET {{booking}}/admin/live
+
+### Lab: drop the LISTEN connection; it reconnects and resyncs every open map
+POST {{booking}}/admin/live/drop-connection

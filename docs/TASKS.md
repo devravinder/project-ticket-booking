@@ -48,8 +48,21 @@
 
 ## 3. Live seat map
 
-- [ ] SSE stream per show; `LISTEN/NOTIFY` so both booking instances push every change
-- [ ] Expired holds reappear as free on every open map
+- [x] `GET /shows/:id/events` (SSE): a `snapshot` first, then `seats` events with only the changed
+      seats, `ping` every 15 s; 404 before the stream opens for an unknown show
+- [x] `pg_notify` inside every transaction that changes a seat (hold, release, expiry sweep); each
+      instance `LISTEN`s on one dedicated connection, reconnects with backoff and resyncs its viewers
+- [x] One seat query per change per instance, however many viewers; `GET /admin/live` (stats),
+      `POST /admin/live/drop-connection` (Lab)
+- [x] Expired holds reappear as free on every open map (the sweeper's write is announced)
+- [x] UI: the seat map is live (no polling), with a state badge, an update counter and a "via
+      instance" picker; Lab card with each instance's LISTEN stats and a "Drop LISTEN" button
+- [x] Verified: 21 API checks. A hold on :7001 reaches viewers on :7001, :7011 and the Vite proxy
+      in about 20 ms; a rolled-back (409) hold sends nothing; a 1.5 s hold shows up free about 0.8 s
+      after it expired; after `pg_terminate_backend` of both LISTEN connections each instance
+      reconnects once, resyncs, and later changes arrive; closed streams are removed. 12 browser
+      checks: bob watching via :7011 sees alice's hold in 22 ms, expiry frees the seat on both maps,
+      no seat-map requests in 4 s, the Lab drop button reconnects
 
 ## 4. Fake payment gateway
 
